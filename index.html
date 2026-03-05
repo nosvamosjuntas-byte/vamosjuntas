@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impulsa — A sua agente de carreira</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#faf8f4;--surface:#fff;--surface2:#f4f1eb;--border:#e8e2d5;
+    --accent:#8b5e3c;--accent2:#c49a6c;
+    --accent-soft:rgba(139,94,60,0.08);--accent-soft2:rgba(196,154,108,0.15);
+    --text:#2c2416;--text-muted:#7a6a58;--text-dim:#b0a090;
+    --gold:#c49a6c;--green:#5a8a6a;--red-soft:#c0604a;--blue-soft:#4a6e8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;}
+
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;}
+  .logo{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--accent);}
+  .logo{white-space:nowrap;} .logo em{font-size:0.72rem;font-style:normal;color:var(--text-dim);font-family:'DM Sans',sans-serif;margin-left:8px;white-space:nowrap;}
+
+  .steps{display:flex;align-items:center;}
+  .step{display:flex;align-items:center;gap:7px;font-size:0.72rem;color:var(--text-dim);padding:5px 12px;border-radius:20px;transition:all 0.3s;}
+  .step.active{background:var(--accent-soft);color:var(--accent);font-weight:500;}
+  .step.done{color:var(--green);}
+  .step-num{width:19px;height:19px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:600;flex-shrink:0;}
+  .step.done .step-num{background:var(--green);border-color:var(--green);color:white;}
+  .step-arrow{color:var(--text-dim);font-size:0.75rem;padding:0 1px;}
+
+  .main{display:flex;min-height:calc(100vh - 57px);}
+
+  /* CHAT */
+  .chat-panel{width:460px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);height:calc(100vh - 57px);position:sticky;top:57px;}
+  .chat-header{padding:16px 22px 13px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .chat-header h2{font-family:'Playfair Display',serif;font-size:1rem;color:var(--accent);}
+  .chat-header p{font-size:0.73rem;color:var(--text-muted);margin-top:2px;}
+
+  .messages{flex:1;overflow-y:auto;padding:22px 18px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;}
+  .messages::-webkit-scrollbar{width:3px;}
+  .messages::-webkit-scrollbar-thumb{background:var(--border);}
+
+  .msg{display:flex;gap:9px;animation:fadeUp 0.3s ease;}
+  .msg.user{flex-direction:row-reverse;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+
+  .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;flex-shrink:0;}
+  .agent-av{background:var(--accent-soft2);color:var(--accent);border:1px solid rgba(139,94,60,0.2);font-family:'Playfair Display',serif;}
+  .user-av{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+
+  .bubble{padding:11px 15px;border-radius:13px;font-size:0.83rem;line-height:1.65;max-width:330px;}
+  .agent-bub{background:var(--surface2);border:1px solid var(--border);border-radius:3px 13px 13px 13px;}
+  .user-bub{background:var(--accent);color:white;border-radius:13px 3px 13px 13px;}
+  .phase-tag{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:4px;font-weight:500;}
+  .optional-tag{display:inline-block;font-size:0.68rem;background:rgba(196,154,108,0.15);color:var(--gold);border-radius:8px;padding:2px 8px;margin-top:6px;}
+
+  .typing-dots span{display:inline-block;width:5px;height:5px;background:var(--text-dim);border-radius:50%;margin:0 2px;animation:dot 1.2s infinite;}
+  .typing-dots span:nth-child(2){animation-delay:0.2s;}.typing-dots span:nth-child(3){animation-delay:0.4s;}
+  @keyframes dot{0%,80%,100%{opacity:0.3;transform:scale(0.8);}40%{opacity:1;transform:scale(1);}}
+
+  .quick-replies{padding:7px 18px 10px;display:flex;flex-wrap:wrap;gap:6px;}
+  .qr{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:6px 13px;font-size:0.75rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+  .qr:hover{border-color:var(--accent2);color:var(--accent);background:var(--accent-soft);}
+  .qr.skip{border-style:dashed;color:var(--text-dim);}
+  .qr.multi{border:1.5px solid var(--border);background:var(--surface2);}
+  .qr.multi.selected{background:var(--accent);color:white;border-color:var(--accent);}
+  .qr-confirm{margin-top:8px;width:100%;background:var(--accent);color:white;border:none;border-radius:20px;padding:10px 20px;font-size:0.84rem;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;display:none;}
+  .qr-confirm.visible{display:block;}
+
+  .input-wrap{padding:10px 14px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;}
+  textarea{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:0.83rem;resize:none;min-height:40px;max-height:110px;color:var(--text);outline:none;transition:border-color 0.2s;line-height:1.5;}
+  textarea:focus{border-color:var(--accent2);}
+  textarea::placeholder{color:var(--text-dim);}
+  .send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;color:white;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;flex-shrink:0;}
+  .send-btn:hover{opacity:0.85;}
+
+  /* WORKSPACE */
+  .workspace{flex:1;overflow-y:auto;padding:32px 36px;display:flex;flex-direction:column;gap:32px;}
+  .ws-section{opacity:0.22;transition:opacity 0.4s;pointer-events:none;}
+  .ws-section.active{opacity:1;pointer-events:all;}
+  .ws-section.done{opacity:0.78;}
+
+  .section-header{display:flex;align-items:center;gap:11px;margin-bottom:18px;}
+  .section-num{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);border:1.5px solid var(--accent2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.88rem;}
+  .section-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--text);}
+  .section-sub{font-size:0.77rem;color:var(--text-muted);margin-top:2px;}
+
+  /* CADASTRO */
+  .cadastro-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+  .cadastro-field{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .cadastro-field:last-child{border-bottom:none;}
+  .cadastro-field-icon{font-size:1rem;width:24px;text-align:center;flex-shrink:0;}
+  .cadastro-field-info{flex:1;}
+  .cadastro-field-label{font-size:0.78rem;color:var(--text-muted);}
+  .cadastro-field-value{font-size:0.88rem;color:var(--text);margin-top:2px;min-height:18px;}
+  .cadastro-field-value.pending{color:var(--text-dim);font-style:italic;font-size:0.78rem;}
+  .cadastro-badge{font-size:0.62rem;background:rgba(196,154,108,0.15);color:var(--gold);border-radius:8px;padding:2px 7px;font-weight:500;}
+
+  /* OBJETIVO */
+  .obj-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .obj-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:11px;padding:14px 15px;cursor:pointer;text-align:left;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+  .obj-btn:hover{border-color:var(--accent2);background:var(--accent-soft);}
+  .obj-btn.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px rgba(139,94,60,0.12);}
+  .obj-icon{font-size:1.15rem;margin-bottom:6px;}
+  .obj-label{font-size:0.83rem;font-weight:500;color:var(--text);display:block;}
+  .obj-sub{font-size:0.7rem;color:var(--text-muted);margin-top:3px;display:block;}
+  .obj-anchor{margin-top:0;background:linear-gradient(135deg,var(--accent-soft),rgba(196,154,108,0.12));border:1.5px solid rgba(139,94,60,0.25);border-radius:11px;padding:15px 18px;display:block;animation:fadeUp 0.35s ease;}
+  .obj-anchor-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:5px;}
+  .obj-anchor-value{font-family:'Playfair Display',serif;font-size:1rem;color:var(--text);}
+  .obj-anchor-sub{font-size:0.77rem;color:var(--text-muted);margin-top:5px;line-height:1.55;}
+
+  /* TIMELINE */
+  .timeline-container{position:relative;padding-left:28px;}
+  .timeline-line{position:absolute;left:9px;top:8px;bottom:0;width:1px;background:linear-gradient(to bottom,var(--accent2),transparent);}
+  .timeline-item{position:relative;margin-bottom:14px;animation:fadeUp 0.3s ease;}
+  .timeline-dot{position:absolute;left:-22px;top:11px;width:9px;height:9px;border-radius:50%;border:2px solid var(--accent2);background:var(--surface);}
+  .timeline-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 15px;display:flex;gap:11px;align-items:flex-start;}
+  .timeline-year{font-size:0.68rem;color:var(--gold);font-weight:600;min-width:32px;margin-top:1px;}
+  .timeline-event{font-size:0.83rem;color:var(--text);}
+  .timeline-type{font-size:0.65rem;padding:2px 8px;border-radius:10px;display:inline-block;margin-top:4px;font-weight:500;}
+  .type-profissional{background:rgba(74,110,138,0.1);color:var(--blue-soft);}
+  .type-pessoal{background:rgba(90,138,106,0.1);color:var(--green);}
+  .type-desafio{background:rgba(192,96,74,0.12);color:var(--red-soft);}
+  .type-conquista{background:rgba(196,154,108,0.18);color:var(--accent);}
+
+  .insights-box{background:linear-gradient(135deg,var(--accent-soft),rgba(196,154,108,0.1));border:1px solid rgba(139,94,60,0.18);border-radius:11px;padding:16px 18px;margin-top:18px;}
+  .insights-box h4{font-family:'Playfair Display',serif;font-size:0.93rem;color:var(--accent);margin-bottom:9px;}
+  .insight-tag{display:inline-block;background:white;border:1px solid var(--border);border-radius:7px;padding:5px 11px;font-size:0.76rem;color:var(--text);margin:3px 3px 0 0;line-height:1.45;}
+
+  /* SWOT */
+  .swot-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .swot-q{border-radius:11px;padding:16px;border:1px solid;}
+  .swot-q-f{background:rgba(90,138,106,0.05);border-color:rgba(90,138,106,0.28);}
+  .swot-q-fr{background:rgba(192,96,74,0.05);border-color:rgba(192,96,74,0.22);}
+  .swot-q-o{background:rgba(74,110,138,0.05);border-color:rgba(74,110,138,0.22);}
+  .swot-q-a{background:rgba(139,94,60,0.05);border-color:rgba(139,94,60,0.18);}
+  .swot-qlabel{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:9px;}
+  .swot-q-f .swot-qlabel{color:var(--green);}.swot-q-fr .swot-qlabel{color:var(--red-soft);}
+  .swot-q-o .swot-qlabel{color:var(--blue-soft);}.swot-q-a .swot-qlabel{color:var(--accent);}
+  .swot-item{font-size:0.79rem;color:var(--text-muted);padding:4px 0;border-bottom:1px dashed var(--border);display:flex;align-items:flex-start;gap:6px;line-height:1.4;}
+  .swot-item:last-child{border-bottom:none;}
+  .swot-bullet{flex-shrink:0;margin-top:2px;font-size:0.58rem;}
+  .swot-q-f .swot-bullet{color:var(--green);}.swot-q-fr .swot-bullet{color:var(--red-soft);}
+  .swot-q-o .swot-bullet{color:var(--blue-soft);}.swot-q-a .swot-bullet{color:var(--accent);}
+  .swot-empty{font-size:0.74rem;color:var(--text-dim);padding:4px 0;font-style:italic;}
+
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px;margin-top:14px;}
+  .summary-card h4{font-family:'Playfair Display',serif;color:var(--accent);margin-bottom:10px;font-size:0.98rem;}
+  .summary-card p{font-size:0.81rem;color:var(--text-muted);line-height:1.75;}
+
+  /* PDF */
+  .pdf-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px 28px;text-align:center;opacity:0.22;pointer-events:none;transition:opacity 0.4s;}
+  .pdf-section.active{opacity:1;pointer-events:all;}
+  .pdf-section h3{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--text);margin-bottom:7px;}
+  .pdf-section p{font-size:0.8rem;color:var(--text-muted);margin-bottom:18px;}
+  .pdf-btn{background:var(--accent);color:white;border:none;border-radius:10px;padding:12px 30px;font-size:0.86rem;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;transition:all 0.2s;}
+  .pdf-btn:hover{background:#7a5233;transform:translateY(-1px);}
+  .pdf-note{margin-top:12px;font-size:0.72rem;color:var(--text-dim);font-style:italic;}
+
+  /* PESQUISA */
+  .survey-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px 28px;opacity:0.22;pointer-events:none;transition:opacity 0.4s;}
+  .survey-section.active{opacity:1;pointer-events:all;}
+  .survey-section h3{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);margin-bottom:6px;}
+  .survey-section p{font-size:0.8rem;color:var(--text-muted);margin-bottom:22px;}
+  .survey-q{margin-bottom:22px;}
+  .survey-q-label{font-size:0.84rem;color:var(--text);margin-bottom:10px;line-height:1.5;}
+  .scale-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .scale-btn{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);font-size:0.82rem;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--text-muted);transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+  .scale-btn:hover{border-color:var(--accent2);color:var(--accent);}
+  .scale-btn.selected{background:var(--accent);border-color:var(--accent);color:white;}
+  .scale-labels{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text-dim);margin-top:6px;}
+  .survey-submit{background:var(--accent);color:white;border:none;border-radius:10px;padding:11px 28px;font-size:0.84rem;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;transition:all 0.2s;margin-top:8px;}
+  .survey-submit:hover{background:#7a5233;}
+  .survey-submit:disabled{opacity:0.4;cursor:not-allowed;}
+  .survey-thanks{background:linear-gradient(135deg,var(--accent-soft),rgba(196,154,108,0.12));border:1px solid rgba(139,94,60,0.2);border-radius:11px;padding:20px;text-align:center;display:none;animation:fadeUp 0.3s ease;}
+  .survey-thanks.show{display:block;}
+  .pay-opt{background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;font-size:0.78rem;font-family:'DM Sans',sans-serif;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .pay-opt:hover{border-color:var(--accent2);color:var(--accent);}
+  .pay-opt.selected{background:var(--accent);border-color:var(--accent);color:white;}
+  .survey-thanks p{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
+  .survey-thanks strong{display:block;font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--accent);margin-bottom:6px;}
+
+  /* NARRATIVA & POSICIONAMENTO */
+  .narrativa-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px;}
+  .narrativa-card-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:8px;}
+  .narrativa-card-content{font-size:0.84rem;color:var(--text);line-height:1.65;font-style:italic;}
+  .narrativa-card-content strong{font-style:normal;color:var(--accent);}
+  .posic-card{background:var(--surface2);border-left:3px solid var(--accent2);border-radius:0 12px 12px 0;padding:14px 18px;margin-bottom:10px;}
+  .posic-card-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);font-weight:600;margin-bottom:6px;}
+  .posic-card-value{font-size:0.85rem;color:var(--text);line-height:1.6;}
+
+  /* PLANO DE AÇÃO */
+  .plano-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px 28px;opacity:0.22;pointer-events:none;transition:opacity 0.4s;}
+  .plano-section.active{opacity:1;pointer-events:all;}
+  .acoes-list{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+  .acao-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 15px;display:flex;align-items:flex-start;gap:10px;}
+  .acao-num{width:24px;height:24px;border-radius:50%;background:var(--accent-soft);border:1.5px solid var(--accent2);color:var(--accent);font-size:0.72rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .acao-text{font-size:0.83rem;color:var(--text);line-height:1.55;}
+  .acao-tag{font-size:0.65rem;padding:2px 8px;border-radius:10px;margin-top:5px;display:inline-block;font-weight:500;}
+  .acao-tag-3d{background:rgba(90,138,106,0.12);color:var(--green);}
+  .acao-tag-1m{background:rgba(74,110,138,0.12);color:var(--blue-soft);}
+  .acao-tag-3m{background:rgba(196,154,108,0.18);color:var(--accent);}
+  .w2h-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+  .w2h-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;}
+  .w2h-card-title{font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .w2h-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
+  .w2h-key{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);font-weight:600;min-width:70px;margin-top:2px;}
+  .w2h-val{font-size:0.79rem;color:var(--text-muted);line-height:1.45;}
+  .w2h-pesquisar{display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;background:rgba(196,154,108,0.12);color:var(--gold);border:1px dashed var(--accent2);border-radius:8px;padding:3px 9px;font-style:italic;}
+  .w2h-tag{display:inline-block;font-size:0.68rem;border-radius:10px;padding:2px 8px;margin-bottom:6px;font-weight:500;}
+
+  @media(max-width:840px){
+    .main{flex-direction:column;}
+    .chat-panel{width:100%;height:55vh;position:relative;top:0;}
+    .workspace{padding:22px 18px;}
+    .obj-options,.swot-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Impulsa <em>a sua agente de carreira</em></div>
+  <div class="steps">
+    <div class="step active" id="step0"><div class="step-num">✦</div> Início</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="stepObj"><div class="step-num">◎</div> Objetivo</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step1"><div class="step-num">1</div> Linha do Tempo</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step2"><div class="step-num">2</div> SWOT</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step3"><div class="step-num">3</div> Narrativa</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step4"><div class="step-num">4</div> Plano</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step5"><div class="step-num">5</div> PDF</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="chat-panel">
+    <div class="chat-header">
+      <h2>A sua agente de carreira</h2>
+      <p>Responda no seu ritmo. Não há resposta certa.</p>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="quick-replies" id="quickReplies"></div>
+    <button class="qr-confirm" id="qrConfirm"></button>
+    <div class="input-wrap">
+      <textarea id="userInput" placeholder="Escreva aqui..." rows="1"></textarea>
+      <button class="send-btn" id="sendBtn">↑</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+
+    <!-- CADASTRO -->
+    <div class="ws-section active" id="ws-cadastro">
+      <div class="section-header">
+        <div class="section-num">✦</div>
+        <div>
+          <div class="section-title">Seu Cadastro</div>
+          <div class="section-sub">Para personalizar sua experiência</div>
+        </div>
+      </div>
+      <div class="cadastro-card">
+        <div class="cadastro-field">
+          <div class="cadastro-field-icon">👤</div>
+          <div class="cadastro-field-info">
+            <div class="cadastro-field-label">Nome</div>
+            <div class="cadastro-field-value pending" id="cad-nome">Aguardando...</div>
+          </div>
+        </div>
+        <div class="cadastro-field">
+          <div class="cadastro-field-icon">🎂</div>
+          <div class="cadastro-field-info">
+            <div class="cadastro-field-label">Data de aniversário <span class="cadastro-badge">opcional</span></div>
+            <div class="cadastro-field-value pending" id="cad-aniversario">Aguardando...</div>
+          </div>
+        </div>
+        <div class="cadastro-field">
+          <div class="cadastro-field-icon">✉️</div>
+          <div class="cadastro-field-info">
+            <div class="cadastro-field-label">E-mail <span class="cadastro-badge">opcional</span></div>
+            <div class="cadastro-field-value pending" id="cad-email">Aguardando...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBJETIVO -->
+    <div class="ws-section" id="ws-objetivo">
+      <div class="section-header">
+        <div class="section-num">◎</div>
+        <div>
+          <div class="section-title">Seu Objetivo de Carreira</div>
+          <div class="section-sub">Entender melhor seu objetivo — pode ser atualizado a qualquer momento</div>
+        </div>
+      </div>
+      <div class="obj-anchor show" id="objAnchor">
+        <div class="obj-anchor-label">Objetivo atual</div>
+        <div class="obj-anchor-value" id="objAnchorValue">Aguardando seleção no chat...</div>
+        <div class="obj-anchor-sub" id="objAnchorSub"></div>
+      </div>
+      <div id="contextoCard" style="display:none; margin-top:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px 18px;">
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:10px;">Seu contexto</div>
+        <div id="contextoItems"></div>
+      </div>
+    </div>
+
+    <!-- LINHA DO TEMPO -->
+    <div class="ws-section" id="ws-timeline">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div>
+          <div class="section-title">Linha do Tempo de Vida</div>
+          <div class="section-sub">Seus marcos, escolhas e viradas — profissionais e pessoais</div>
+        </div>
+      </div>
+      <div class="timeline-container">
+        <div class="timeline-line"></div>
+        <div id="timelineItems"></div>
+      </div>
+      <div id="insightsBox" style="display:none" class="insights-box">
+        <h4>✦ Padrões que emergem da sua história</h4>
+        <div id="insightsContent"></div>
+      </div>
+    </div>
+
+    <!-- SWOT -->
+    <div class="ws-section" id="ws-swot">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div>
+          <div class="section-title">SWOT Pessoal</div>
+          <div class="section-sub">Um mapa de quem você é e do que o mercado oferece</div>
+        </div>
+      </div>
+      <div class="swot-grid">
+        <div class="swot-q swot-q-f"><div class="swot-qlabel">Forças · interno</div><div id="swot-forcas"></div></div>
+        <div class="swot-q swot-q-fr"><div class="swot-qlabel">Fraquezas · interno</div><div id="swot-fraquezas"></div></div>
+        <div class="swot-q swot-q-o"><div class="swot-qlabel">Oportunidades · externo</div><div id="swot-oportunidades"></div></div>
+        <div class="swot-q swot-q-a"><div class="swot-qlabel">Ameaças · externo</div><div id="swot-ameacas"></div></div>
+      </div>
+      <div class="summary-card" id="swotSummary" style="display:none">
+        <h4>Sua síntese — conectando quem você é com o que você quer</h4>
+        <p id="swotSummaryText"></p>
+      </div>
+    </div>
+
+    <!-- NARRATIVA -->
+    <div class="ws-section" id="ws-narrativa">
+      <div class="section-header" style="margin-bottom:18px;">
+        <div class="section-num" style="background:var(--accent-soft);border-color:var(--accent2);color:var(--accent);">✦</div>
+        <div>
+          <div class="section-title">Sua Narrativa</div>
+          <div class="section-sub">Como você se conta — sua história em palavras</div>
+        </div>
+      </div>
+      <div id="narrativaCards"></div>
+    </div>
+
+    <!-- POSICIONAMENTO -->
+    <div class="ws-section" id="ws-posicionamento">
+      <div class="section-header" style="margin-bottom:18px;">
+        <div class="section-num" style="background:var(--accent-soft);border-color:var(--accent2);color:var(--accent);">◈</div>
+        <div>
+          <div class="section-title">Posicionamento</div>
+          <div class="section-sub">Como você se apresenta ao mercado</div>
+        </div>
+      </div>
+      <div id="posicionamentoCards"></div>
+    </div>
+
+    <!-- PLANO DE AÇÃO -->
+    <div class="plano-section" id="ws-plano">
+      <div class="section-header" style="margin-bottom:18px;">
+        <div class="section-num" style="background:var(--accent-soft);border-color:var(--accent2);color:var(--accent);">3</div>
+        <div>
+          <div class="section-title">Plano de Ação</div>
+          <div class="section-sub">Suas próximas ações — organizadas por prazo e prioridade</div>
+        </div>
+      </div>
+      <div class="acoes-list" id="acoesListWs"></div>
+      <div class="w2h-grid" id="w2hGrid"></div>
+    </div>
+
+    <!-- PESQUISA -->
+    <div class="survey-section" id="ws-survey">
+      <h3>Antes de ir — 5 perguntas rápidas 💛</h3>
+      <p>Sua opinião ajuda a melhorar a experiência para outras mulheres — e é muito importante para nós.</p>
+
+      <div class="survey-q" id="sq1">
+        <div class="survey-q-label">1. O quanto essa jornada te ajudou a ter mais clareza sobre sua carreira?</div>
+        <div class="scale-row" id="scale1"></div>
+        <div class="scale-labels"><span>Nada</span><span>Muito</span></div>
+      </div>
+
+      <div class="survey-q" id="sq2">
+        <div class="survey-q-label">2. O quanto você se sentiu acolhida e à vontade durante a experiência?</div>
+        <div class="scale-row" id="scale2"></div>
+        <div class="scale-labels"><span>Nada</span><span>Muito</span></div>
+      </div>
+
+      <div class="survey-q" id="sq3">
+        <div class="survey-q-label">3. Qual a chance de você recomendar a Impulsa para outra mulher?</div>
+        <div class="scale-row" id="scale3"></div>
+        <div class="scale-labels"><span>Não recomendaria</span><span>Com certeza</span></div>
+      </div>
+
+      <div class="survey-q" id="sq4">
+        <div class="survey-q-label">4. Você voltaria a usar a Impulsa em uma próxima fase da sua carreira?</div>
+        <div class="scale-row" id="scale4"></div>
+        <div class="scale-labels"><span>Não voltaria</span><span>Com certeza</span></div>
+      </div>
+
+      <div class="survey-q" id="sq5">
+        <div class="survey-q-label">5. Se a Impulsa fosse um serviço pago, qual a chance de você assinar?</div>
+        <div class="scale-row" id="scale5"></div>
+        <div class="scale-labels"><span>Nenhuma chance</span><span>Com certeza assinaria</span></div>
+      </div>
+
+      <button class="survey-submit" id="surveySubmit" onclick="submitSurvey()" disabled>Enviar avaliação</button>
+
+      <div class="survey-thanks" id="surveyThanks">
+        <strong>Obrigada! ✦</strong>
+        <p>Sua avaliação foi registrada. Ela vai ajudar a Impulsa a se tornar ainda melhor para as próximas mulheres que chegarem aqui.</p>
+      </div>
+    </div>
+
+    <!-- PDF -->
+    <div class="pdf-section" id="ws-pdf">
+      <h3>Seu Mapa de Narrativas está pronto ✦</h3>
+      <p>Baixe em PDF para guardar, revisitar e usar nas suas próximas conversas — com líderes, recrutadores ou com você mesma.</p>
+      <button class="pdf-btn" onclick="generatePDF()">⬇ Baixar meu Mapa de Narrativas</button>
+      <div class="pdf-note">Inclui sua trajetória, SWOT, narrativa, posicionamento e plano de ação.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// OBJECTIVES
+// ============================================================
+const OBJECTIVES = {
+  recolocacao:{label:'Recolocação profissional',anchor:'Você está buscando uma nova oportunidade que faça sentido para quem você é hoje.',swotContext:'que te destacam como candidata',
+    tlIntro:(n)=>`${n?n+', o':'O'} seu objetivo é encontrar uma nova oportunidade com confiança.\n\nPara chegar lá, vamos primeiro olhar para tudo que você já construiu. Sua história é o seu maior ativo.\n\nMe conta: qual foi o marco mais importante da sua trajetória profissional até agora?`,
+    tlFollowQs:[()=>`Que momento importante. E qual foi um **desafio** que você enfrentou e superou na sua trajetória?`,()=>`Isso revela muito sobre você. Agora: qual **conquista** te enche de orgulho, mesmo que ninguém tenha reconhecido da forma certa?`,()=>`Por último: o que aconteceu recentemente que te fez decidir buscar uma nova oportunidade?`],
+    tlQRs:[['Meu primeiro emprego formal','Uma promoção que conquistei','Um projeto do qual me orgulho','Quando me tornei referência em algo'],['Uma demissão que precisei superar','Um projeto que quase não deu certo','Uma mudança de área difícil'],['Uma entrega que poucos viram o valor','Uma habilidade que a empresa dependia de mim'],['Fui demitida recentemente','O ambiente ficou insustentável','Percebi que não havia mais crescimento']]},
+  promocao:{label:'Promoção ou crescimento',anchor:'Você quer ser reconhecida e crescer na empresa onde já está.',swotContext:'que justificam e sustentam a sua promoção',
+    tlIntro:(n)=>`${n?n+', p':'P'}edir uma promoção exige clareza sobre o que você já entregou.\n\nVamos construir essa clareza juntas. Me conta: qual foi o momento em que você se sentiu mais capaz e reconhecida no trabalho?`,
+    tlFollowQs:[()=>`Que entrega poderosa. E qual foi um **desafio profissional** que te mostrou o quanto você pode?`,()=>`Muito bom. Qual é a **contribuição** que você dá hoje que vai além do seu cargo formal?`,()=>`E o que aconteceu recentemente que confirmou que é hora de pedir essa promoção?`],
+    tlQRs:[['Liderei um projeto com sucesso','Fui além da minha função','Uma entrega que impactou a empresa'],['Um projeto difícil que quase não deu certo','Uma situação em que precisei me impor'],['Faço muito mais do que meu cargo exige','Treino e apoio outras pessoas da equipe'],['Minha liderança me deu mais responsabilidades','Percebo que entrego mais do que colegas no mesmo nível']]},
+  aumento:{label:'Negociação de salário',anchor:'Você quer negociar e receber o que seu trabalho realmente vale.',swotContext:'que embasam e fortalecem sua negociação salarial',
+    tlIntro:(n)=>`${n?n+', s':'S'}aber o que você vale é o primeiro passo de qualquer negociação.\n\nMe conta: qual foi a entrega ou conquista que mais orgulho trouxe — e que talvez nunca tenha sido devidamente valorizada?`,
+    tlFollowQs:[()=>`Isso é muito mais do que a maioria reconhece. E qual foi um **momento difícil** em que você continuou entregando mesmo assim?`,()=>`Que resiliência. Existe algo que você faz hoje que a empresa claramente **depende de você**, mesmo sem reconhecimento formal?`,()=>`E o que te fez perceber que chegou a hora de ter essa conversa sobre salário?`],
+    tlQRs:[['Uma entrega que gerou resultado financeiro real','Uma responsabilidade que assumi sem aumento','Um projeto que salvou um processo'],['Continuei entregando mesmo sem reconhecimento','Assumi uma demissão e continuei firme'],['Sou a referência para colegas e gestores','Resolvo coisas que ninguém mais sabe fazer'],['Vi colegas com menos experiência ganhando mais','Assumi função maior sem ajuste de salário']]},
+  mudanca:{label:'Mudança de empresa ou área',anchor:'Você quer ir para um novo lugar ou setor que faça mais sentido para você.',swotContext:'que te posicionam bem nessa transição',
+    tlIntro:(n)=>`${n?n+', m':'M'}udar é um ato de coragem. Para ir com segurança, você precisa saber o que leva e o que fica.\n\nMe conta: o que te fez perceber que era hora de mudar?`,
+    tlFollowQs:[()=>`Faz sentido. E qual foi um **marco profissional** do qual você se orgulha — que vai junto com você para esse novo lugar?`,()=>`Que conquista. Agora: o que você sabe fazer bem que é **transferível** para outra empresa ou área?`,()=>`E o que aconteceu recentemente que confirmou que é hora de dar esse passo?`],
+    tlQRs:[['Percebi que não me identifico mais com o que faço','O ambiente da empresa ficou ruim','Meu crescimento estagnou'],['Um projeto que liderei com orgulho','Uma habilidade que desenvolvi na prática'],['Organizar e estruturar processos','Me relacionar bem com equipes diversas'],['Tive uma conversa que me abriu os olhos','Vi uma oportunidade que fez sentido']]},
+  retorno:{label:'Retorno da licença maternidade',anchor:'Você voltou da licença maternidade e quer se reposicionar com clareza.',swotContext:'que sustentam seu reposicionamento após a maternidade',
+    tlIntro:(n)=>`${n?n+', v':'V'}oltar ao trabalho depois da maternidade é um recomeço que poucos compreendem de verdade.\n\nMe conta: antes de entrar na licença, qual foi a conquista profissional da qual você mais se orgulhava?`,
+    tlFollowQs:[()=>`Que conquista linda. E qual foi o **maior desafio** que você enfrentou nesse período — antes, durante ou depois da licença?`,()=>`Você passou por muito. A maternidade te ensinou algo sobre você mesma que mudou quem você é como profissional?`,()=>`E hoje, voltando, o que você mais quer que as pessoas saibam sobre você?`],
+    tlQRs:[['Uma conquista antes da licença','Uma responsabilidade que carregava','Um projeto que deixei bem encaminhado'],['O medo de ter sido esquecida','A pressão de conciliar tudo','Sentir que o mundo seguiu sem mim'],['Aprendi a priorizar o essencial','Fiquei mais empática e estratégica','Entendi o que realmente importa no trabalho'],['Que sou a mesma profissional — e mais','Que quero crescer e ser reconhecida','Que tenho muito ainda a entregar']]},
+  pivotar:{label:'Pivotar a carreira',anchor:'Você quer mudar completamente o que faz — e precisa de clareza para dar esse salto.',swotContext:'que sustentam e viabilizam sua transição de carreira',
+    tlIntro:(n)=>`${n?n+', p':'P'}ivotar é um dos movimentos mais corajosos. Antes de olhar para onde ir, vamos entender o que te trouxe até aqui.\n\nMe conta: o que você faz hoje — ou fez — que nunca pareceu completamente certo para você?`,
+    tlFollowQs:[()=>`Faz sentido sentir isso. E existe algo que você sempre **voltava** mesmo sem perceber — uma paixão, área, forma de trabalhar?`,()=>`Isso é um sinal importante. E qual foi um **momento profissional** do qual você se orgulha — algo que mostra o que você tem a oferecer, mesmo em outro campo?`,()=>`E o que aconteceu recentemente que te deu certeza de que é hora de mudar de verdade?`],
+    tlQRs:[['Sempre me senti no lugar errado','O trabalho nunca me trouxe energia de volta','Faço bem mas não me realizo'],['Uma área que me interessa há anos','Uma paixão fora do trabalho','Algo que estudo por conta própria'],['Uma entrega criativa que me energizou','Um projeto diferente que fez sentido'],['Um esgotamento que me fez repensar tudo','Vi alguém mudar de área e me inspirei','Recebi um feedback que me abriu os olhos']]},
+};
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  phase:'cadastro_nome', // cadastro_nome | cadastro_aniversario | cadastro_email | objetivo | timeline | swot | done
+  name:'', birthday:'', email:'',
+  objective:null,
+  tlStep:0, tlOpeningDone:false, swotStep:0, swotSubStep:0,
+  timelineItems:[],
+  swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
+  summaryText:'',
+  descoberta:{visao:'',estado:'',obstaculo:''},
+  narrativa:null, posicionamento:null, descobertaStep:0, descobertaSugestao:null, descobertaAlt:null,
+  acoes:[], // all suggested actions
+  acoesPriorizadas:[], // final 3 with 5W2H
+  planoStep:0, // 0=suggest, 1=addMore, 2=prazos_3d, 3=prazos_1m, 4=prazos_3m, 5=w2h
+  survey:{q1:null,q2:null,q3:null,q4:null,q5:null},
+};
+
+// ============================================================
+// SWOT QUESTIONS
+// ============================================================
+function getSwotQs(){
+  const ctx=OBJECTIVES[state.objective]?.swotContext||'para sua carreira';
+  return[
+    {key:'forcas',phase:'SWOT — Forças',
+      intro:`Sua linha do tempo está registrada. 🌿\n\nAgora, sua **SWOT** — começando pelas Forças ${ctx}.\n\nPense: com o que as pessoas te procuram? O que você faz bem quase sem esforço?`,
+      qr:['Organizar processos e informações','Me comunicar e explicar bem','Resolver problemas sob pressão','Cuidar de pessoas e relacionamentos','Aprender rápido','Atenção a detalhes'],
+      followup:`Ótimo. Tem mais alguma força que você tende a subestimar — que parece óbvia para você, mas que outros notam?`,
+      fuQr:['Liderança informal','Empatia e escuta ativa','Criatividade prática','Consistência e entrega','Mediação de conflitos']},
+    {key:'fraquezas',phase:'SWOT — Fraquezas',
+      intro:`Agora as **Fraquezas** — padrões que às vezes te atrapalham. Nomear é o primeiro passo para não ser controlada por eles.\n\nEm que situações você sente que não está no seu melhor?`,
+      qr:['Me coloco em segundo plano demais','Dificuldade de pedir ajuda','Me cobro em excesso','Evito conflito mesmo quando necessário','Insegurança para falar em público','Procrastino em decisões difíceis'],
+      followup:`Reconhecer isso já é muito. Tem mais algum padrão que você nota em si mesma?`,
+      fuQr:['Dificuldade de impor limites','Não comunico bem o que faço','Me comparo com outros','Esgaço sem pedir ajuda']},
+    {key:'oportunidades',phase:'SWOT — Oportunidades',
+      intro:`Agora olhamos para fora — as **Oportunidades** no mercado e no seu contexto.\n\nQue mudanças ou tendências jogam a seu favor agora?`,
+      qr:['Alta demanda por gestão e organização','Crescimento do trabalho remoto/híbrido','Valorização de soft skills','Expansão de empresas na minha área','Digitalização de processos que domino'],
+      followup:`Ótimo. Tem alguma rede, pessoa ou ambiente que pode abrir portas para você agora?`,
+      fuQr:['Tenho boas conexões no setor','Minha empresa está crescendo','Tenho referências que me apoiam','Grupos profissionais de mulheres']},
+    {key:'ameacas',phase:'SWOT — Ameaças',
+      intro:`Por último: as **Ameaças** — o que está fora do seu controle e pode ser um obstáculo.\n\nO que te preocupa no cenário atual?`,
+      qr:['Mercado competitivo na minha área','Automação de tarefas que faço','Falta de rede de contatos ampla','Gaps de qualificação formal','Preconceito ou barreiras estruturais'],
+      followup:`Entendido. Tem alguma pressão pessoal que também afeta sua carreira nesse momento?`,
+      fuQr:['Responsabilidades familiares','Pressão financeira','Falta de tempo para estudar','Esgotamento']},
+  ];
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function addMsg(role,text,phase){
+  const el=document.getElementById('messages');
+  const d=document.createElement('div');d.className=`msg ${role}`;
+  const av=role==='agent'?'<div class="avatar agent-av">I</div>':'<div class="avatar user-av">✦</div>';
+  const bc=role==='agent'?'agent-bub':'user-bub';
+  const ph=(phase&&role==='agent')?`<div class="phase-tag">${phase}</div>`:'';
+  const fmt=text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  d.innerHTML=`${av}<div class="bubble ${bc}">${ph}${fmt}</div>`;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+function showTyping(){const el=document.getElementById('messages');const d=document.createElement('div');d.id='typing';d.className='msg agent';d.innerHTML=`<div class="avatar agent-av">I</div><div class="bubble agent-bub"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+function setQR(opts,skipLabel){
+  const skip=skipLabel?`<button class="qr skip" onclick="send('${skipLabel}')">${skipLabel}</button>`:'';
+  document.getElementById('quickReplies').innerHTML=opts.map(o=>`<button class="qr" onclick="send('${o.replace(/'/g,"\\'")}')">${o}</button>`).join('')+skip;
+}
+function clearQR(){
+  document.getElementById('quickReplies').innerHTML='';
+  const btn=document.getElementById('qrConfirm');
+  if(btn){btn.className='qr-confirm';btn.onclick=null;}
+}
+
+// Multi-select QR — renders toggleable chips + confirm button
+function setQRMulti(opts, onConfirm){
+  const container=document.getElementById('quickReplies');
+  const confirmBtn=document.getElementById('qrConfirm');
+  const selected=new Set();
+
+  container.innerHTML=opts.map((o,i)=>`<button class="qr multi" data-idx="${i}">${o}</button>`).join('');
+
+  container.querySelectorAll('.qr.multi').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx=btn.dataset.idx;
+      if(selected.has(idx)){
+        selected.delete(idx);
+        btn.classList.remove('selected');
+      } else {
+        selected.add(idx);
+        btn.classList.add('selected');
+      }
+      if(selected.size>0){
+        confirmBtn.textContent=`Confirmar (${selected.size} selecionada${selected.size>1?'s':''}) →`;
+        confirmBtn.classList.add('visible');
+      } else {
+        confirmBtn.classList.remove('visible');
+      }
+    });
+  });
+
+  confirmBtn.onclick=()=>{
+    const picks=Array.from(selected).sort().map(i=>opts[parseInt(i)]);
+    confirmBtn.className='qr-confirm'; // hide
+    onConfirm(picks);
+  };
+}
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+function markDone(id,nextId){
+  const el=document.getElementById(id);
+  el.classList.remove('active');el.classList.add('done');
+  el.querySelector('.step-num').textContent='✓';
+  if(nextId)document.getElementById(nextId).classList.add('active');
+}
+
+// ============================================================
+// CADASTRO FLOW
+// ============================================================
+async function handleCadastro(text){
+  if(state.phase==='cadastro_nome'){
+    const skip=/^(pular|não|nao|skip)$/i.test(text.trim());
+    const fullName = skip ? '' : text.trim();
+    state.name = fullName.split(' ')[0]; // first name for conversation
+    state.fullName = fullName; // full name for records
+    const el=document.getElementById('cad-nome');
+    el.textContent=fullName||'—';
+    el.classList.remove('pending');
+
+    showTyping();await delay(1000);removeTyping();
+
+    state.phase='cadastro_aniversario';
+    addMsg('agent',`${state.name?'Prazer, '+state.name+'! 🌿':'Tudo bem! 🌿'}\n\nAgora, uma informação opcional: qual é a sua **data de aniversário**?\n\n<span class="optional-tag">opcional — pode pular se preferir</span>`,'Cadastro');
+    setQR(['Prefiro não informar'],'Pular');
+
+  } else if(state.phase==='cadastro_aniversario'){
+    const skip=/^(pular|não|nao|skip|prefiro não|prefiro nao)/i.test(text.trim());
+    state.birthday=skip?'':text.trim();
+    const el=document.getElementById('cad-aniversario');
+    el.textContent=state.birthday||'—';
+    el.classList.remove('pending');
+
+    showTyping();await delay(1000);removeTyping();
+
+    state.phase='cadastro_email';
+    addMsg('agent',`E por último no cadastro: qual é o seu **e-mail**?\n\nVocê pode usar para receber seu PDF depois, mas é totalmente opcional.\n\n<span class="optional-tag">opcional — pode pular se preferir</span>`,'Cadastro');
+    setQR(['Prefiro não informar'],'Pular');
+
+  } else if(state.phase==='cadastro_email'){
+    const skip=/^(pular|não|nao|skip|prefiro não|prefiro nao)/i.test(text.trim());
+    state.email=skip?'':text.trim();
+    const el=document.getElementById('cad-email');
+    el.textContent=state.email||'—';
+    el.classList.remove('pending');
+
+    // Transition to objective
+    document.getElementById('ws-cadastro').classList.add('done');
+    document.getElementById('ws-objetivo').classList.add('active');
+    markDone('step0','stepObj');
+
+    showTyping();await delay(1200);removeTyping();
+    state.phase='objetivo';
+    const firstName=state.name||'';
+
+    showTyping(); await delay(1200); removeTyping();
+    addMsg('agent',(firstName?'Obrigada, '+firstName+'! ':'Obrigada! ')+'🌿\n\nSabemos que a vida é composta por fases e ciclos. Alguns planejados, outros que nos surpreendem no meio do caminho.\n\nA Impulsa quer te ajudar a construir a narrativa certa para você ter:\n\n✦ Sua carreira organizada com informações que ajudam a buscar seu objetivo\n✦ Argumentos, posicionamento e conteúdo sobre você mesma\n✦ Desenvolvimento por meio do autoconhecimento\n✦ Visibilidade do seu próximo passo com um plano de ação','Bem-vinda à Impulsa');
+
+    showTyping(); await delay(2800); removeTyping();
+    addMsg('agent','Imagine que você leva na sua bolsa a sua história, seus resultados, projetos, receios e habilidades — mas são tantas informações que você ainda não parou para organizá-las de modo que te ajudem a dar passos maiores.\n\nSabe aquela conversa que você adiou por receio de não saber o que falar depois de um "Não"? 🌿\n\nAqui, todo esse conteúdo é organizado para que você use na hora e no lugar certo — inclusive em conversas que podem te impulsionar para onde você quer chegar.','');
+
+    showTyping(); await delay(2200); removeTyping();
+    addMsg('agent','Agora me conta: **qual é o seu objetivo de carreira nesse momento?**\n\nEscolha o que faz mais sentido para essa fase. Lembre: você pode voltar e atualizar quando quiser — a Impulsa foi feita para acompanhar você em diferentes momentos da vida. 🌱','Seu Objetivo');
+    setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira','🤍 Não sei ainda — preciso de ajuda']);
+  }
+}
+
+// ============================================================
+// OBJECTIVE
+// ============================================================
+const OBJ_MAP={'🔍 Recolocação profissional':'recolocacao','📈 Promoção ou crescimento':'promocao','💰 Aumento de salário':'aumento','🧭 Mudança de empresa ou área':'mudanca','🌱 Retorno da licença maternidade':'retorno','🔄 Pivotar a carreira':'pivotar','🤍 Não sei ainda — preciso de ajuda':'descoberta'};
+
+async function selectObj(rawKey){
+  const key = OBJ_MAP[rawKey] || rawKey;
+  state.objective=key;
+  const obj=OBJECTIVES[key];
+  document.getElementById('objAnchorValue').textContent=obj.label;
+  document.getElementById('objAnchorSub').textContent=obj.anchor;
+  document.getElementById('ws-objetivo').classList.add('active');
+  clearQR(); addMsg('user', rawKey);
+  showTyping(); await delay(1200); removeTyping();
+
+  // Start 3 context questions
+  state.phase='contexto';
+  state.contexto={};
+  state.contextoStep=0;
+  askContexto();
+}
+
+const CONTEXTO_QS = [
+  {
+    key:'experiencia',
+    q:'Ótima escolha! ✦\n\nAgora me conta um pouco mais sobre você para eu personalizar sua jornada.\n\nHá quantos anos você está no mercado de trabalho?',
+    qr:['Menos de 2 anos','Entre 2 e 5 anos','Entre 5 e 10 anos','Entre 10 e 20 anos','Mais de 20 anos'],
+  },
+  {
+    key:'area',
+    q:'Em qual área você atua ou atuou mais?',
+    qr:['Administrativa / Financeira','Comercial / Vendas','Operacional / Logística','RH / Pessoas','Atendimento / Customer Success','Outra área'],
+  },
+  {
+    key:'situacao',
+    q:'E como você está hoje profissionalmente?',
+    qr: null, // dinâmico — varia pelo objetivo
+  },
+];
+
+const SITUACAO_QR = {
+  recolocacao: ['Fui demitida recentemente','Pedi demissão e ainda não encontrei','Estou há mais de 6 meses buscando','Acabei de começar a busca'],
+  promocao:    ['Estou pronta mas ninguém me enxerga assim','Já recebi sinais de que pode acontecer','Nunca tive essa conversa com minha liderança','Fui preterida recentemente e quero tentar de novo'],
+  aumento:     ['Sei que ganho abaixo do mercado','Assumi mais responsabilidades sem ajuste','Há anos sem aumento real','Recebi uma proposta de outra empresa e quero negociar'],
+  mudanca:     ['Estou empregada mas insatisfeita','Já tenho uma oportunidade em vista','Estou explorando o mercado com calma','Preciso sair mas ainda não sei para onde'],
+  retorno:     ['Acabei de voltar da licença','Voltei há alguns meses e ainda me ajustando','Volto em breve e quero me preparar','Voltei mas sinto que preciso me reposicionar'],
+  pivotar:     ['Ainda estou na área antiga mas já decidi mudar','Já dei os primeiros passos na nova direção','Estou em dúvida entre duas áreas','Sei o que não quero mas ainda não sei o que quero'],
+};
+
+function askContexto(){
+  const q = CONTEXTO_QS[state.contextoStep];
+  // For situacao question, use objective-specific options
+  const qr = q.key === 'situacao' ? (SITUACAO_QR[state.objective] || SITUACAO_QR.recolocacao) : q.qr;
+  addMsg('agent', q.q, 'Entender Melhor Seu Objetivo');
+  setQR(qr);
+}
+
+function updateContextoCard(){
+  const card = document.getElementById('contextoCard');
+  const items = document.getElementById('contextoItems');
+  const labels = {experiencia:'Experiência', area:'Área de atuação', situacao:'Situação atual'};
+  const html = Object.entries(state.contexto).map(([k,v])=>
+    `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border);font-size:0.8rem;color:var(--text-muted);">
+      <span style="color:var(--gold);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;min-width:110px;">${labels[k]||k}</span>
+      <span>${v}</span>
+    </div>`
+  ).join('');
+  items.innerHTML = html;
+  card.style.display = 'block';
+}
+
+// ============================================================
+// OBJETIVO HANDLER (from chat QR)
+// ============================================================
+async function handleObjetivo(text){
+  const key = OBJ_MAP[text] || text;
+  if(key === 'descoberta'){
+    await startDescoberta();
+  } else if(OBJECTIVES[key]){
+    await selectObj(text);
+  }
+}
+
+// ============================================================
+// DESCOBERTA DE OBJETIVO
+// ============================================================
+const DESCOBERTA_LOGIC = {
+  // [estadoEmocional][obstáculo] => objetivo sugerido
+  estagnada:   { clareza:'promocao',  financeiro:'aumento',   medo:'promocao',   apoio:'promocao'  },
+  esgotada:    { clareza:'pivotar',   financeiro:'aumento',   medo:'mudanca',    apoio:'pivotar'   },
+  perdida:     { clareza:'pivotar',   financeiro:'recolocacao',medo:'pivotar',   apoio:'pivotar'   },
+  desempregada:{ clareza:'recolocacao',financeiro:'recolocacao',medo:'recolocacao',apoio:'recolocacao'},
+  retornando:  { clareza:'retorno',   financeiro:'retorno',   medo:'retorno',    apoio:'retorno'   },
+  animada:     { clareza:'promocao',  financeiro:'aumento',   medo:'mudanca',    apoio:'promocao'  },
+};
+
+const ESTADO_MAP = {
+  'Estagnada — sinto que não estou crescendo':'estagnada',
+  'Esgotada — preciso de uma mudança':'esgotada',
+  'Perdida — não sei o que quero':'perdida',
+  'Desempregada e buscando recomeço':'desempregada',
+  'Voltando de uma licença ou pausa':'retornando',
+  'Animada mas sem direção clara':'animada',
+};
+
+const OBSTACULO_MAP = {
+  'Falta de clareza sobre o que quero':'clareza',
+  'Medo de arriscar e errar':'medo',
+  'Situação financeira me pressiona':'financeiro',
+  'Não tenho apoio ou rede de contatos':'apoio',
+};
+
+async function startDescoberta(){
+  clearQR();
+  addMsg('user','🤍 Não sei ainda — preciso de ajuda');
+  state.phase='descoberta';
+  state.descoberta={visao:'', estado:'', obstaculo:''};
+  state.descobertaStep=0;
+  showTyping(); await delay(1200); removeTyping();
+  addMsg('agent','Tudo bem — não saber o objetivo ainda é completamente válido. A clareza vem com reflexão, e é exatamente isso que vamos fazer juntas. 🌿\n\nMe conta: **se você acordasse daqui a 1 ano com sua vida profissional exatamente como quer**, o que teria mudado?\n\nEscreva livremente — não precisa ser organizado.','Descobrindo seu Objetivo');
+  clearQR();
+}
+
+async function handleDescoberta(text){
+  showTyping(); await delay(1100); removeTyping();
+
+  if(state.descobertaStep === 0){
+    state.descoberta.visao = text;
+    state.descobertaStep = 1;
+    addMsg('agent','Obrigada por compartilhar isso. 🌿\n\nAgora me diz: **como você se sente hoje** no trabalho ou na sua vida profissional?','Descobrindo seu Objetivo');
+    setQR(Object.keys(ESTADO_MAP));
+
+  } else if(state.descobertaStep === 1){
+    state.descoberta.estado = ESTADO_MAP[text] || 'estagnada';
+    state.descobertaStep = 2;
+    addMsg('agent','Entendo. E **o que mais te impede** de dar o próximo passo agora?','Descobrindo seu Objetivo');
+    setQR(Object.keys(OBSTACULO_MAP));
+
+  } else if(state.descobertaStep === 2){
+    state.descoberta.obstaculo = OBSTACULO_MAP[text] || 'clareza';
+
+    // Suggest objective based on matrix
+    const estadoKey = state.descoberta.estado;
+    const obstKey = state.descoberta.obstaculo;
+    const sugestao = (DESCOBERTA_LOGIC[estadoKey]||DESCOBERTA_LOGIC.animada)[obstKey] || 'promocao';
+    const obj = OBJECTIVES[sugestao];
+
+    // Second suggestion — closest alternative
+    const alternativas = Object.keys(OBJECTIVES).filter(k=>k!==sugestao);
+    const alt = alternativas[Math.floor(Math.random()*alternativas.length)];
+    const objAlt = OBJECTIVES[alt];
+
+    state.descobertaStep = 3;
+    state.descobertaSugestao = sugestao;
+    state.descobertaAlt = alt;
+
+    showTyping(); await delay(1400); removeTyping();
+    addMsg('agent',`Com base no que você compartilhou, a Impulsa sugere **dois objetivos** que fazem sentido para você:\n\n**1. ${obj.label}** — ${obj.anchor}\n\n**2. ${objAlt.label}** — ${objAlt.anchor}\n\nQual desses ressoa mais com você agora?`,'Seu Objetivo');
+    setQR([`1. ${obj.label}`, `2. ${objAlt.label}`, 'Nenhum desses — quero ver todas as opções']);
+
+  } else if(state.descobertaStep === 3){
+    let chosenKey;
+    if(/nenhum|todas/i.test(text)){
+      // Show all options
+      addMsg('agent','Claro! Aqui estão todos os objetivos — escolha o que faz mais sentido para você agora:','Seu Objetivo');
+      setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira']);
+      state.phase='objetivo';
+      return;
+    } else if(text.startsWith('1.')){
+      chosenKey = state.descobertaSugestao;
+    } else {
+      chosenKey = state.descobertaAlt;
+    }
+    const emojiMap = {recolocacao:'🔍 Recolocação profissional',promocao:'📈 Promoção ou crescimento',aumento:'💰 Aumento de salário',mudanca:'🧭 Mudança de empresa ou área',retorno:'🌱 Retorno da licença maternidade',pivotar:'🔄 Pivotar a carreira'};
+    await selectObj(emojiMap[chosenKey]);
+  }
+}
+
+// ============================================================
+// CONTEXTO HANDLER
+// ============================================================
+async function handleContexto(text){
+  const q = CONTEXTO_QS[state.contextoStep];
+  state.contexto[q.key] = text;
+  updateContextoCard();
+  state.contextoStep++;
+  showTyping(); await delay(1000); removeTyping();
+
+  if(state.contextoStep < CONTEXTO_QS.length){
+    askContexto();
+  } else {
+    // All context collected — move to timeline
+    document.getElementById('ws-objetivo').classList.add('done');
+    document.getElementById('ws-timeline').classList.add('active');
+    markDone('stepObj','step1');
+    state.phase='timeline';
+    state.tlStep=0;
+
+    // Calculate period based on birthday
+    const anos = calcIdade();
+    const periodo = anos && anos < 30 ? '10' : '15';
+    state.tlPeriodo = periodo;
+
+    const nm = state.name ? state.name : 'você';
+    addMsg('agent',`Obrigada por compartilhar isso, ${nm}. 🌿\n\nAgora vamos para a parte que eu mais gosto: **a sua história de vida**.\n\nAntes de começar, quero te dizer uma coisa importante: você **não precisa mencionar momentos sensíveis, informações sigilosas ou se expor de nenhuma forma que te deixe desconfortável**. Só compartilhe o que fizer sentido para você.\n\nNo final, tudo que você contar vai compor o seu **Mapa de Narrativas** — uma forma que encontramos de mostrar que você tem uma história linda que precisa ser reconhecida.\n\nMe conta: o que aconteceu na sua vida nos últimos **${periodo} anos**? Pode começar por onde quiser — trabalho, família, estudos, mudanças, descobertas...`,'Linha do Tempo');
+    setQR(['Vou começar pelo trabalho','Vou começar por uma mudança de vida','Vou começar por algo que aprendi','Prefiro começar do começo','Prefiro não contar agora']);
+  }
+}
+
+// ============================================================
+// TIMELINE — história de vida com aprofundamento guiado
+// ============================================================
+
+// Perguntas de aprofundamento — a agente puxa fios da história
+const TL_APROFUNDAMENTOS = [
+  { trigger: 'always',   q: (n)=>`Que história. Obrigada por compartilhar isso. 🌿\n\nMe conta sobre o seu **primeiro trabalho** — como foi? O que você aprendeu ali, mesmo que tenha sido difícil?`, qr:['Foi meu primeiro emprego formal','Era um trabalho informal ou temporário','Fiz estágio ou trainee','Comecei empreendendo'] },
+  { trigger: 'always',   q: (n)=>`E ao longo desse caminho — você **mudou de empresa**, de área ou de cidade em algum momento? Como foi essa transição?`, qr:['Sim, mudei de empresa','Sim, mudei de área','Mudei de cidade ou país','Fiquei na mesma empresa mas cresci muito','Não, fiz toda minha trajetória num lugar só'] },
+  { trigger: 'always',   q: (n)=>`Pensando em tudo isso... qual é a **entrega ou conquista** da qual você mais se orgulha? Pode ser algo que ninguém viu, mas que você sabe o valor.`, qr:['Um projeto que criei ou transformei','Um resultado que gerou impacto real','Algo que aprendi do zero','Liderei ou desenvolvi pessoas','Uma situação difícil que resolvi'] },
+  { trigger: 'always',   q: (n)=>`E os estudos — você fez **faculdade, cursos ou formações**? Isso impactou sua trajetória de alguma forma?`, qr:['Fiz faculdade e impactou muito','Fiz faculdade mas não usei diretamente','Aprendi mais na prática do que estudando','Estou estudando agora','Não fiz faculdade e tudo bem com isso'] },
+  { trigger: 'always',   q: (n)=>`Por último: houve algum **momento de virada** — uma fase que mudou quem você é ou como você trabalha? Pode ser pessoal ou profissional.`, qr:['Uma demissão que me ensinou muito','A maternidade mudou tudo','Um esgotamento que me fez repensar','Uma conquista que me deu confiança','Uma pessoa que me abriu portas'] },
+];
+
+function calcIdade(){
+  if(!state.birthday) return null;
+  const parts = state.birthday.split(/[\/\-\.]/);
+  if(parts.length < 3) return null;
+  const birth = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if(m < 0 || (m===0 && today.getDate() < birth.getDate())) age--;
+  return isNaN(age) ? null : age;
+}
+
+function guessType(t){
+  if(/demitid|emprego|trabalh|cargo|promoç|carreira|empresa|projeto|entrega|função|lider/i.test(t))return'profissional';
+  if(/orgulh|conquistei|terminei|consegui|fiz|criei|aprendi|resultado/i.test(t))return'conquista';
+  if(/difícil|desafio|superei|enfrentei|perda|crise|medo|maternidade|esgot|virada/i.test(t))return'desafio';
+  return'pessoal';
+}
+function typeLabel(t){return{profissional:'Profissional',pessoal:'Pessoal',desafio:'Desafio superado',conquista:'Conquista'}[t]||t;}
+
+function addTLItem(text,type){
+  const baseYear = new Date().getFullYear();
+  const periodo = parseInt(state.tlPeriodo||'15');
+  const total = state.timelineItems.length;
+  const step = Math.floor(periodo / (TL_APROFUNDAMENTOS.length+1));
+  const y = baseYear - periodo + (total * step) + Math.floor(Math.random()*2);
+  state.timelineItems.push({text,type,year:Math.min(y, baseYear)});
+  document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
+}
+
+function showInsights(){
+  const box=document.getElementById('insightsBox');box.style.display='block';
+  const types=state.timelineItems.map(i=>i.type);
+  const ins=[];
+  if(types.includes('desafio'))ins.push('Você tem histórico real de superar adversidades — isso é resiliência, não sorte.');
+  if(types.includes('conquista'))ins.push('Suas conquistas mostram iniciativa e capacidade de gerar resultados concretos.');
+  if(types.includes('profissional'))ins.push('Sua experiência profissional tem mais profundidade do que você costuma reconhecer.');
+  if(types.includes('pessoal'))ins.push('Sua história de vida vai muito além do currículo — e isso é um diferencial.');
+  ins.push(`Cada fase te preparou para ${OBJECTIVES[state.objective]?.label.toLowerCase()||'esse próximo passo'}.`);
+  document.getElementById('insightsContent').innerHTML=ins.map(i=>`<span class="insight-tag">→ ${i}</span>`).join('');
+}
+
+async function handleTimeline(text){
+  // Detect if person doesn't want to share
+  const skip = /^(prefiro não contar|não quero|nao quero|prefiro pular|pular|não agora|nao agora|prefiro deixar)/i.test(text.trim());
+  if(skip){
+    showTyping(); await delay(1200); removeTyping();
+    addMsg('agent','Tudo bem, sem nenhum problema. 🌿\n\nSe você resolver nos contar depois, estaremos aqui para te ouvir.\n\nSaiba que no final você receberá o seu **Mapa de Narrativas** — e quanto mais você compartilhar, mais completo ele será. Mas o ritmo é sempre seu.\n\nPor enquanto, vamos para a próxima etapa.','Linha do Tempo — História de Vida');
+    await delay(1500);
+    await introSwot();
+    return;
+  }
+
+  // Skip a specific question gracefully
+  const skipQ = /^(prefiro não entrar|não quero falar disso|pular essa|nao quero falar)/i.test(text.trim());
+  if(skipQ){
+    showTyping(); await delay(900); removeTyping();
+    state.tlStep++; // advance without recording
+    if(state.tlStep < TL_APROFUNDAMENTOS.length){
+      const next = TL_APROFUNDAMENTOS[state.tlStep];
+      addMsg('agent','Claro, sem problema. 🌿 Vamos para outra.\n\n'+next.q(state.name),'Linha do Tempo — História de Vida');
+      setQR([...next.qr, 'Prefiro não entrar nesse assunto']);
+      state.tlStep++;
+    } else {
+      await finishTimeline();
+    }
+    return;
+  }
+
+  // Detect what she shared and react before moving to next question
+  const tlReactions = {
+    mudanca:   (t) => /mudança|mudei|virada|recomeço|nova fase|saí|deixei|decidi|transformação/i.test(t),
+    conquista: (t) => /conquist|orgulho|consegui|realizei|criei|fiz|terminei|primeiro/i.test(t),
+    desafio:   (t) => /difícil|desafio|superei|enfrentei|perda|crise|esgot|demiti|perdei/i.test(t),
+    maternidade:(t)=> /maternidade|filh|licença|bebê|gestação|mãe/i.test(t),
+    profissional:(t)=> /trabalho|emprego|empresa|cargo|promoç|carreira|projeto/i.test(t),
+  };
+
+  const tlReactionMsgs = {
+    mudanca:    ['Que momento importante. Mudanças assim costumam exigir muita coragem — e moldam muito quem a gente se torna. 🌿','Recomeços são sempre mais pesados do que parecem para quem está de fora. Obrigada por compartilhar isso.'],
+    conquista:  ['Isso é muito bonito. Sinto que você ainda não reconhece o tamanho dessa conquista. 🌿','Que realização. E o interessante é que isso revela muito sobre quem você é — não só o que você fez.'],
+    desafio:    ['Obrigada por confiar isso aqui. Fases assim deixam marcas — e também deixam força. 🌿','Você passou por isso. Isso por si só já diz muito sobre você.'],
+    maternidade:['A maternidade tem um peso que pouquíssimas pessoas conseguem ver de fora. Obrigada por trazer isso. 🌿','Esse capítulo muda tudo — e muita gente subestima o quanto.'],
+    profissional:['Que trajetória. É interessante como a gente constrói tanto sem perceber o valor do que foi feito. 🌿','Isso revela muito sobre o que você já construiu — e o que você ainda vai construir.'],
+  };
+
+  // Find the best reaction
+  let reactionMsg = 'Que história. Obrigada por compartilhar isso. 🌿';
+  for(const [key, test] of Object.entries(tlReactions)){
+    if(test(text)){
+      const msgs = tlReactionMsgs[key];
+      reactionMsg = msgs[Math.floor(Math.random()*msgs.length)];
+      break;
+    }
+  }
+
+  // Detect if it's the opening message (tlStep===0) — needs deeper follow-up before moving on
+  const isOpening = state.tlStep === 0;
+
+  addTLItem(text, guessType(text));
+  showTyping(); await delay(1400); removeTyping();
+
+  if(isOpening){
+    // React to what she said and ask to tell more before moving to guided questions
+    state.tlStep = 0; // don't advance yet
+    state.tlOpeningDone = true;
+    addMsg('agent', reactionMsg + '\n\nMe conta mais sobre isso — o que aconteceu?', 'Linha do Tempo — História de Vida');
+    clearQR();
+    return;
+  }
+
+  // After she elaborated on opening, or on subsequent answers — react + next question
+  if(state.tlOpeningDone && state.tlStep === 0){
+    // She just elaborated — now move to guided questions
+    state.tlOpeningDone = false;
+    addTLItem(text, guessType(text));
+  }
+
+  showTyping(); await delay(1000); removeTyping();
+
+  if(state.tlStep < TL_APROFUNDAMENTOS.length){
+    const aprofund = TL_APROFUNDAMENTOS[state.tlStep];
+    // Prepend a short reaction to her last message before the next question
+    const transition = ['Faz todo sentido. ✦','Obrigada por isso. 🌿','Isso ficou registrado. ✦','Que fase importante.'];
+    const trans = transition[state.tlStep % transition.length];
+    addMsg('agent', trans + '\n\n' + aprofund.q(state.name), 'Linha do Tempo — História de Vida');
+    setQR([...aprofund.qr, 'Prefiro não entrar nesse assunto']);
+    state.tlStep++;
+  } else {
+    await finishTimeline();
+  }
+}
+
+async function finishTimeline(){
+  showInsights();
+  document.getElementById('ws-timeline').classList.add('done');
+  markDone('step1','step2');
+  await delay(600);
+  await introSwot();
+}
+
+async function introSwot(){
+  document.getElementById('ws-swot').classList.add('active');
+  renderSwot();
+  showTyping(); await delay(1800); removeTyping();
+
+  addMsg('agent','Antes de continuarmos, quero te apresentar a próxima etapa: a **SWOT Pessoal**. 🌿\n\nCarreira não é só esforço — é alocação estratégica de energia. A SWOT é uma ferramenta muito usada por empresas para avaliar produtos e negócios. Aqui, vamos usá-la como uma ferramenta de **autoconsciência estratégica** — sobre você.\n\nEla te ajuda a:\n\n**1. Tomar decisões melhores** — você passa a decidir onde investir tempo e quando dizer "não" com base em quem você é, não em comparação com os outros.\n\n**2. Separar o que está no seu controle do que não está** — isso reduz a ansiedade e aumenta o foco.\n\n**3. Acelerar crescimento** — as pessoas promovidas não são as que fazem tudo, mas as que fazem as coisas certas, no tempo certo.\n\n**4. Construir sua narrativa profissional** — para responder com segurança: "Qual é meu diferencial?", "Por que eu?", "Qual próximo passo faz sentido?"','SWOT Pessoal');
+
+  showTyping(); await delay(2200); removeTyping();
+
+  addMsg('agent','A matriz tem 4 quadrantes:\n\n**S — Forças** → interno, positivo. O que você controla e vai bem.\n**W — Fraquezas** → interno, limitante. O que você controla mas precisa de atenção.\n**O — Oportunidades** → externo, favorável. O que o mercado oferece para o seu plano.\n**T — Ameaças** → externo, de risco. O que está fora do seu controle e pode ser obstáculo.\n\nPodemos começar?','SWOT Pessoal');
+  setQR(['Sim, vamos!','Pode continuar 🌿']);
+  state.phase='swot_confirm';
+}
+
+// ============================================================
+// TL RETRY (gentle ask before PDF)
+// ============================================================
+async function handleTlRetry(text){
+  const yes = /^(sim|quero|vou|pode|ok|claro|tudo bem)/i.test(text.trim());
+  showTyping(); await delay(900); removeTyping();
+  if(yes){
+    state.phase='timeline';
+    document.getElementById('ws-timeline').classList.add('active');
+    addMsg('agent','Fico feliz! 🌿 Me conta o que você quiser — um trabalho, uma fase, uma virada. Sem pressa.','Linha do Tempo — História de Vida');
+    setQR(['Vou começar pelo meu primeiro emprego','Vou contar sobre uma mudança importante','Vou falar sobre algo que me orgulho','Só um momento marcante']);
+  } else {
+    state.phase='done';
+    addMsg('agent','Tudo bem, respeitamos isso. 🌿\n\nSempre que quiser, a Impulsa estará aqui para te ouvir.\n\nAgora vamos para a pesquisa rápida antes do seu PDF! 💛','Quase lá!');
+    document.getElementById('ws-survey').classList.add('active');
+    document.getElementById('ws-swot').classList.add('done');
+    markDone('step2','step3');
+    clearQR();
+  }
+}
+
+// ============================================================
+// SWOT
+// ============================================================
+async function handleSwotConfirm(text){
+  // Any positive response starts the SWOT
+  showTyping(); await delay(800); removeTyping();
+  state.phase='swot';
+  const q=getSwotQs()[0];
+  addMsg('agent', q.intro, q.phase);
+  askSwotQuadrant(q);
+}
+
+function renderSwot(){
+  ['forcas','fraquezas','oportunidades','ameacas'].forEach(q=>{
+    const el=document.getElementById(`swot-${q}`);
+    el.innerHTML=state.swot[q].length?state.swot[q].map(i=>`<div class="swot-item"><span class="swot-bullet">●</span><span>${i}</span></div>`).join(''):`<div class="swot-empty">Aguardando...</div>`;
+  });
+}
+function addSwotItem(key,text){if(/não|nenhuma|principais/i.test(text))return;state.swot[key].push(text);renderSwot();}
+function buildSummary(){
+  const obj=OBJECTIVES[state.objective];
+  const f=state.swot.forcas.slice(0,2).join(' e ')||'suas forças identificadas';
+  const fr=state.swot.fraquezas[0]||'a autocrítica excessiva';
+  const o=state.swot.oportunidades[0]||'as oportunidades mapeadas';
+  const a=state.swot.ameacas[0]||'os desafios do cenário atual';
+  const nm=state.name?`${state.name}, a`:'A';
+  state.summaryText=`${nm} sua jornada revela uma profissional com história real — com altos, baixos e aprendizados que não aparecem em nenhum currículo, mas que moldam quem você é.\n\nSeu objetivo é claro: ${obj?.label.toLowerCase()||'avançar na carreira'}. E você já tem o que precisa para começar.\n\nSuas principais forças — ${f} — são ativos estratégicos que você frequentemente subestima. O padrão de ${fr} merece atenção, mas nomeá-lo já é o primeiro passo para não deixá-lo no comando.\n\nNo cenário atual, ${o} trabalha a seu favor. O desafio de ${a} é real, mas pode ser enfrentado com posicionamento claro e ação consistente.\n\nSeu próximo capítulo começa com o que você já construiu — não com o que ainda falta.`;
+  document.getElementById('swotSummaryText').textContent=state.summaryText;
+  document.getElementById('swotSummary').style.display='block';
+}
+function askSwotQuadrant(q){
+  // Show multi-select chips for current quadrant
+  setQRMulti([...q.qr, ...q.fuQr], async (picks)=>{
+    // User confirmed their multi-selection
+    picks.forEach(p=>addSwotItem(q.key, p));
+    renderSwot();
+    clearQR();
+    showTyping(); await delay(900); removeTyping();
+    // Ask if she wants to add anything in her own words
+    addMsg('agent','Tem algo que você gostaria de acrescentar com as suas próprias palavras?', q.phase);
+    setQR(['Não, pode continuar']);
+    state.swotSubStep=1; // waiting for free text or skip
+  });
+}
+
+async function handleSwot(text){
+  const qs=getSwotQs();
+  const q=qs[state.swotStep];
+
+  // subStep 0 = showing multi-select (handled by setQRMulti callback, not here)
+  // subStep 1 = waiting for free text or "Não, pode continuar"
+  if(state.swotSubStep===1){
+    const skip=/^(não|nao|pode continuar|skip|pular)/i.test(text.trim());
+    if(!skip && text.trim()){
+      addSwotItem(q.key, text.trim());
+      renderSwot();
+    }
+    // Advance to next quadrant
+    showTyping(); await delay(900); removeTyping();
+    state.swotStep++; state.swotSubStep=0;
+    if(state.swotStep < qs.length){
+      const next=qs[state.swotStep];
+      state.swotSubStep=0;
+      addMsg('agent', next.intro, next.phase);
+      askSwotQuadrant(next);
+    } else {
+      buildSummary();
+      document.getElementById('ws-swot').classList.add('done');
+      markDone('step2','step3');
+      state.phase='narrativa';
+      clearQR();
+      await delay(600);
+      await startNarrativa();
+    }
+  }
+}
+
+// ============================================================
+// NARRATIVA & POSICIONAMENTO
+// ============================================================
+
+function gerarNarrativa(){
+  // ── Extrair dados ricos do SWOT ──────────────────────────────
+  const f0 = state.swot.forcas[0] || 'capacidade de entregar resultados';
+  const f1 = state.swot.forcas[1] || 'visão estratégica';
+  const f2 = state.swot.forcas[2] || null;
+  const fr0 = state.swot.fraquezas[0] || null;
+  const o0 = state.swot.oportunidades[0] || 'um mercado em transformação';
+  const o1 = state.swot.oportunidades[1] || null;
+  const a0 = state.swot.ameacas[0] || null;
+
+  const obj = OBJECTIVES[state.objective]?.label.toLowerCase() || 'crescer na carreira';
+  const objKey = state.objective || 'recolocacao';
+  const area = state.contexto?.area || 'sua área';
+  const exp = state.contexto?.experiencia || 'anos de mercado';
+  const tl0 = state.timelineItems[0]?.text || null;
+  const tl1 = state.timelineItems[1]?.text || null;
+  const tlFrase = tl0 ? `A sua trajetória — que inclui ${tl0}${tl1 ? ' e '+tl1 : ''} — mostra` : 'Sua trajetória mostra';
+
+  // ── Resumo profissional (3ª pessoa, denso em dados SWOT) ─────
+  const forcasResumo = f2 ? `${f0}, ${f1} e ${f2}` : `${f0} e ${f1}`;
+  const oportunidadeResumo = o1 ? `${o0} e ${o1}` : o0;
+  const cautelaFr = fr0 ? ` Com consciência sobre ${fr0}, trabalha com intencionalidade para que isso não limite seu potencial.` : '';
+  const resumo = `Profissional de ${area} com ${exp} de experiência, reconhecida por ${forcasResumo}. ${tlFrase} uma capacidade consistente de gerar impacto real — mesmo diante de contextos desafiadores.${cautelaFr} Hoje, com o mercado abrindo espaço para ${oportunidadeResumo}, está estrategicamente posicionada para ${obj}.`;
+
+  // ── Elevator pitch (1ª pessoa, 30s, usa forças + oportunidade) ─
+  const gancho = {
+    recolocacao: 'Estou em busca de uma nova oportunidade',
+    promocao:    'Estou num momento de buscar crescimento',
+    aumento:     'Estou num momento de reconhecer meu valor de mercado',
+    mudanca:     'Estou em transição para um novo ciclo',
+    retorno:     'Estou retomando minha carreira com clareza e intenção',
+    pivotar:     'Estou em pivô de carreira — com consciência e propósito',
+  }[objKey] || 'Estou num momento importante de carreira';
+  const frFrase = fr0 ? ` Sei que ${fr0} é um ponto de atenção para mim — e trabalho ativamente nisso.` : '';
+  const elevator = `"${gancho}. Tenho ${exp} em ${area} e o que me diferencia é ${f0} — especialmente combinado com ${f1}.${frFrase} Vejo que ${o0}, e é exatamente aí que consigo contribuir de verdade. ${tlFrase.replace('mostra','mostrou')} que sei me adaptar e entregar mesmo quando o caminho é difícil."`;
+
+  // ── Como responder "me fala sobre você" (conversa real, flui) ──
+  const viradaFrase = tl0 ? `Um momento que me marcou muito foi ${tl0} — aprendi ali que ${f1} é algo que carrego de forma muito natural.` : `Fui construindo, ao longo do caminho, uma capacidade real de ${f1}.`;
+  const ameacaFrase = a0 ? ` Sei que ${a0} é um desafio real no meu contexto — mas isso também me fez aprender a ${f0}.` : '';
+  const meConteSobre = `"Minha trajetória em ${area} começou com ${exp} de muito aprendizado prático. ${viradaFrase}${ameacaFrase} Hoje o que mais me motiva é ${o0} — e é por isso que estou buscando ${obj}. Acho que o que eu trago de mais valioso é essa combinação de ${f0} com ${f1} — e a consciência de para onde quero ir."`;
+
+  // ── Frase de posicionamento (síntese cirúrgica) ──────────────
+  const frasePosicionamento = `${f0.charAt(0).toUpperCase()+f0.slice(1)} aplicada em ${area}, com ${exp} de trajetória real — hoje focada em ${obj}.`;
+
+  return { resumo, elevator, meConteSobre, frasePosicionamento,
+           _swotUsado:{ f0,f1,f2,fr0,o0,o1,a0 } };
+}
+
+function gerarPosicionamento(){
+  const f0 = state.swot.forcas[0] || 'capacidade de entrega';
+  const f1 = state.swot.forcas[1] || 'visão estratégica';
+  const fr0 = state.swot.fraquezas[0] || null;
+  const o0 = state.swot.oportunidades[0] || 'mercado em transformação';
+  const o1 = state.swot.oportunidades[1] || null;
+  const a0 = state.swot.ameacas[0] || null;
+  const objKey = state.objective || 'recolocacao';
+  const objLabel = OBJECTIVES[objKey]?.label.toLowerCase() || 'seu objetivo';
+  const area = state.contexto?.area || 'sua área';
+  const exp = state.contexto?.experiencia || 'anos de experiência';
+
+  // Diferencial — cruza forças com oportunidades, menciona ameaças como contexto
+  const oFrase = o1 ? `${o0} e ${o1} estão em alta` : `${o0} está em alta`;
+  const aFrase = a0 ? ` Num cenário em que ${a0} é uma ameaça real para muitos, sua combinação de ${f0} e ${f1} se torna ainda mais valiosa.` : '';
+  const diferencial = `${oFrase} — e você tem exatamente o que esse movimento precisa: ${f0} combinado com ${f1}.${aFrase} Esse não é um diferencial genérico. É construído com ${exp} de prática real em ${area}.`;
+
+  // Headline LinkedIn — adaptada ao objetivo, usa força principal
+  const headlines = {
+    recolocacao: `${area} | ${f0} | Em busca de novos desafios`,
+    promocao:    `${area} | Especialista em ${f0} | Crescimento e impacto`,
+    aumento:     `${area} | ${f0} e ${f1} | Profissional sênior`,
+    mudanca:     `${f0} em ${area} | Em transição intencional`,
+    retorno:     `${area} | ${f0} | Retomando a carreira com propósito`,
+    pivotar:     `De ${area} para novos caminhos | ${f0} | Em pivô de carreira`,
+  };
+  const headline = headlines[objKey] || headlines.recolocacao;
+
+  // Como se posicionar — usa fraqueza como ponto de honestidade estratégica
+  const frFrase = fr0 ? ` Não esconda que ${fr0} é um ponto de desenvolvimento — na verdade, nomear isso com maturidade é diferencial. Mostre que você tem consciência e está trabalhando nisso.` : '';
+  const como = `Para ${objLabel}, destaque ${f0} e ${f1} como diferenciais concretos — sempre com exemplos reais do que você fez e o impacto que gerou. Conecte isso a ${o0}: mostre que você entende o movimento do mercado e sabe onde se encaixa.${frFrase} Sua narrativa deve soar como escolha intencional, não como fuga ou desespero.`;
+
+  return { diferencial, headline, como, _swotUsado:{f0,f1,fr0,o0,o1,a0} };
+}
+
+function renderNarrativa(){
+  const n = gerarNarrativa();
+  state.narrativa = n;
+  const el = document.getElementById('narrativaCards');
+  if(!el) return;
+  el.innerHTML = [
+    ['Resumo profissional', n.resumo],
+    ['Elevator pitch — 30 segundos', n.elevator],
+    ['"Me fala sobre você"', n.meConteSobre],
+    ['Frase de posicionamento', n.frasePosicionamento],
+  ].map(([label, content]) => `
+    <div class="narrativa-card">
+      <div class="narrativa-card-label">${label}</div>
+      <div class="narrativa-card-content">${content}</div>
+    </div>`).join('');
+}
+
+function renderPosicionamento(){
+  const p = gerarPosicionamento();
+  state.posicionamento = p;
+  const el = document.getElementById('posicionamentoCards');
+  if(!el) return;
+  el.innerHTML = [
+    ['Seu diferencial competitivo', p.diferencial],
+    ['Headline sugerida para LinkedIn', p.headline],
+    ['Como se posicionar para seu objetivo', p.como],
+  ].map(([label, content]) => `
+    <div class="posic-card">
+      <div class="posic-card-label">${label}</div>
+      <div class="posic-card-value">${content}</div>
+    </div>`).join('');
+}
+
+async function startNarrativa(){
+  document.getElementById('ws-narrativa').classList.add('active');
+  renderNarrativa();
+  showTyping(); await delay(1600); removeTyping();
+  addMsg('agent', 'Uau — olhando para tudo que você compartilhou, a sua história tem muito mais valor do que você provavelmente reconhece no dia a dia. 🌿\n\nCom base na sua trajetória e no seu SWOT, preparei **sua narrativa profissional** — em quatro versões para diferentes contextos. Você pode ver os cards ao lado.\n\nEssas são sugestões — sinta-se à vontade para adaptar com as suas palavras. O que importa é que **soe como você**.\n\nAlguma dessas versões ressoa? Quer ajustar alguma coisa?', 'Sua Narrativa');
+  setQR(['Gostei, pode continuar', 'Quero ajustar alguma coisa', 'Ficou muito formal', 'Ficou muito genérico']);
+  state.phase = 'narrativa';
+}
+
+async function handleNarrativa(text){
+  showTyping(); await delay(900); removeTyping();
+  const ajustar = /ajustar|formal|genérico|generico|mudar|diferente/i.test(text);
+  if(ajustar){
+    addMsg('agent', 'Entendo! Essas narrativas são geradas a partir do que você compartilhou — quanto mais detalhes você der, mais personalizada fica. 🌿\n\nPor enquanto, use-as como ponto de partida e adapte com as suas palavras. No futuro, a Impulsa vai aprender ainda mais sobre você para gerar versões cada vez mais precisas.\n\nVamos para a próxima etapa?', 'Sua Narrativa');
+    setQR(['Sim, pode continuar 🌿']);
+  } else {
+    await startPosicionamento();
+  }
+}
+
+async function startPosicionamento(){
+  document.getElementById('ws-narrativa').classList.add('done');
+  document.getElementById('ws-posicionamento').classList.add('active');
+  renderPosicionamento();
+  showTyping(); await delay(1400); removeTyping();
+  const objLabel = OBJECTIVES[state.objective]?.label.toLowerCase() || 'seu objetivo';
+  addMsg('agent', `Agora vamos falar de **posicionamento** — como você se apresenta ao mercado de forma estratégica.\n\nIsso vai além do currículo. É sobre como você aparece, o que destaca e como conecta quem você é com ${objLabel}.\n\nOs cards ao lado mostram seu diferencial, uma headline para o LinkedIn e como se posicionar para o seu objetivo. O que acha?`, 'Posicionamento');
+  setQR(['Gostei muito!', 'Quero adaptar depois', 'Pode continuar']);
+  state.phase = 'posicionamento';
+}
+
+async function handlePosicionamento(text){
+  showTyping(); await delay(900); removeTyping();
+  document.getElementById('ws-posicionamento').classList.add('done');
+  markDone('step3', 'step4');
+  await delay(400);
+  document.getElementById('ws-plano').classList.add('active');
+  state.phase = 'plano';
+  startPlano();
+}
+
+// ============================================================
+// PLANO DE AÇÃO
+// ============================================================
+function gerarAcoesSugeridas(){
+  const acoesPorObjetivo = {
+    recolocacao:[
+      'Atualizar currículo e LinkedIn destacando suas principais forças',
+      'Definir 3 empresas-alvo e pesquisar suas culturas e vagas abertas',
+      'Ativar a rede de contatos — enviar mensagens para 5 pessoas estratégicas',
+      'Preparar narrativa para entrevistas: "Por que eu?" com base no seu SWOT',
+      'Criar rotina semanal de candidaturas e acompanhamento de respostas'
+    ],
+    promocao:[
+      'Documentar suas entregas dos últimos 6 meses com resultados concretos',
+      'Agendar conversa com liderança para alinhar expectativas de crescimento',
+      'Identificar 1 projeto de alto impacto para assumir e se destacar',
+      'Comunicar mais internamente o que você entrega — ganhar visibilidade',
+      'Construir relacionamento com pessoas influentes dentro da empresa'
+    ],
+    aumento:[
+      'Pesquisar faixa salarial do mercado para sua área e nível atual',
+      'Listar suas entregas e o impacto financeiro ou operacional de cada uma',
+      'Preparar argumentação clara: por que você merece esse ajuste agora',
+      'Escolher o momento certo — após entrega forte ou avaliação positiva',
+      'Treinar a conversa com alguém de confiança antes de ter com a liderança'
+    ],
+    mudanca:[
+      'Mapear 5 empresas ou áreas que combinam com seu perfil e objetivo',
+      'Atualizar LinkedIn com foco no que você quer — não só no que fez',
+      'Ativar rede de contatos na área ou setor de destino',
+      'Preparar narrativa de transição: o que você leva e por que faz sentido',
+      'Definir prazo para tomar a decisão — sair do modo de espera infinita'
+    ],
+    retorno:[
+      'Reconectar com colegas e liderança — marcar conversas de retorno',
+      'Atualizar-se sobre o que mudou na empresa e no mercado durante a licença',
+      'Definir como quer ser percebida agora — reposicionamento intencional',
+      'Conversar com RH ou liderança sobre plano de crescimento pós-retorno',
+      'Criar rotina sustentável que integre vida profissional e maternidade'
+    ],
+    pivotar:[
+      'Fazer 3 entrevistas com pessoas que trabalham na área desejada',
+      'Identificar habilidades transferíveis do seu histórico para o novo caminho',
+      'Definir 1 projeto pequeno para ganhar experiência prática na nova área',
+      'Atualizar narrativa profissional conectando passado e novo objetivo',
+      'Estabelecer prazo e critérios para saber quando o pivô está completo'
+    ]
+  };
+  return (acoesPorObjetivo[state.objective]||acoesPorObjetivo.recolocacao).map(t=>({text:t,prazo:null}));
+}
+
+function renderAcoesWs(){
+  const el=document.getElementById('acoesListWs');
+  if(!el)return;
+  el.innerHTML=state.acoes.map((a,i)=>`<div class="acao-item"><div class="acao-num">${i+1}</div><div class="acao-text">${a.text}${a.prazo?`<br><span class="acao-tag ${a.prazo==='3 dias'?'acao-tag-3d':a.prazo==='1 mês'?'acao-tag-1m':'acao-tag-3m'}">${a.prazo}</span>`:''}</div></div>`).join('');
+}
+
+// Fields that need research — marked with a "pesquisar" tag
+const W2H_NEEDS_RESEARCH = {
+  who: (a) => a.prazo !== '3 dias', // for 1m and 3m, who to involve needs research
+  where: () => true,                // always needs specific context
+  how: () => true,                  // needs specific plan
+  howMuch: () => false,             // estimated, no research needed
+};
+
+function w2hVal(field, val, a){
+  const needsResearch = W2H_NEEDS_RESEARCH[field] && W2H_NEEDS_RESEARCH[field](a);
+  if(needsResearch){
+    return `${val} <span style="display:inline-block;font-size:0.63rem;background:rgba(196,154,108,0.18);color:var(--gold);border-radius:6px;padding:1px 7px;margin-left:4px;font-weight:500;">🔍 pesquisar</span>`;
+  }
+  return val;
+}
+
+// Fields that need user research — shown with 🔍 tag
+const W2H_PESQUISAR = {
+  who: 'Quem precisa envolver? Pesquise: colegas, líder, recrutador, parceiro...',
+  where: 'Onde vai acontecer? Pesquise: empresa, plataforma, cidade, ambiente...',
+  how: 'Como vai executar? Pesquise: ferramentas, abordagem, passos concretos...',
+};
+function pesquisarTag(hint){ return `<span class="w2h-pesquisar">🔍 ${hint}</span>`; }
+
+function render5W2H(){
+  const grid=document.getElementById('w2hGrid');
+  if(!grid||!state.acoesPriorizadas.length){return;}
+  const tagClass=p=>p==='3 dias'?'acao-tag-3d':p==='1 mês'?'acao-tag-1m':'acao-tag-3m';
+  const obj=OBJECTIVES[state.objective]?.label.toLowerCase()||'sua carreira';
+  const f0=state.swot.forcas[0]||'suas forças identificadas';
+  const o0=state.swot.oportunidades[0]||'oportunidades do mercado';
+
+  const w2h=state.acoesPriorizadas.map(a=>({
+    acao:a.text, prazo:a.prazo,
+    what:a.text,
+    why:'Contribui diretamente para '+obj+' e aproveita '+f0,
+    who:null, // needs research
+    where:null, // needs research
+    when:a.prazo==='3 dias'?'Nos próximos 3 dias — defina o dia exato hoje':a.prazo==='1 mês'?'Nos próximos 30 dias — defina semanas e marcos':'Nos próximos 90 dias — divida em etapas mensais',
+    how:null, // needs research
+    howMuch:a.prazo==='3 dias'?'Baixo esforço — foco em começar':a.prazo==='1 mês'?'Esforço médio — reserve tempo semanal':'Esforço maior — planeje energia e recursos',
+  }));
+
+  const keys=[['O quê','what'],['Por quê','why'],['Quem','who'],['Onde','where'],['Quando','when'],['Como','how'],['Quanto (energia)','howMuch']];
+
+  function renderVal(key, val){
+    if(val) return `<span class="w2h-val">${val}</span>`;
+    if(W2H_PESQUISAR[key]) return pesquisarTag(W2H_PESQUISAR[key]);
+    return '<span class="w2h-val">—</span>';
+  }
+
+  grid.innerHTML=w2h.map(d=>`
+    <div class="w2h-card">
+      <div class="w2h-card-title">
+        <span class="w2h-tag ${tagClass(d.prazo)}" style="font-size:0.68rem;border-radius:10px;padding:2px 8px;margin-bottom:6px;display:inline-block;">${d.prazo}</span><br>
+        ${d.acao}
+      </div>
+      ${keys.map(([k,v])=>`<div class="w2h-row"><span class="w2h-key">${k}</span>${renderVal(v,d[v])}</div>`).join('')}
+    </div>`).join('');
+}
+
+function startPlano(){
+  state.acoes=gerarAcoesSugeridas();
+  state.planoStep=1;
+  renderAcoesWs();
+  const lista=state.acoes.map((a,i)=>`${i+1}. ${a.text}`).join('\n');
+  const objLabel=OBJECTIVES[state.objective]?.label.toLowerCase()||'seu objetivo';
+  addMsg('agent','Sua SWOT está pronta! \u2736\n\nCom base em tudo que você compartilhou, aqui estão **5 ações que fazem sentido para '+objLabel+'**:\n\n'+lista+'\n\nVocê tem mais alguma ação em mente que quer adicionar a essa lista?','Plano de Ação');
+  setQR(['Sim, quero adicionar uma ação','Não, essa lista está boa']);
+}
+
+function pickAcao(text){
+  // Try to match by number or partial text
+  const numMatch=text.match(/\b([1-9])\b/);
+  if(numMatch){const idx=parseInt(numMatch[1])-1;if(state.acoes[idx])return idx;}
+  return state.acoes.findIndex(a=>text.toLowerCase().includes(a.text.toLowerCase().slice(0,25)));
+}
+
+async function handlePlano(text){
+  showTyping(); await delay(900); removeTyping();
+
+  if(state.planoStep===1){
+    if(/^(sim|quero|adicionar|tenho)/i.test(text.trim())){
+      state.planoStep=1.5;
+      addMsg('agent','Ótimo! Qual ação você quer adicionar?','Plano de Ação');
+      clearQR();
+    } else {
+      state.planoStep=2;
+      askPrazo('3 dias');
+    }
+  } else if(state.planoStep===1.5){
+    state.acoes.push({text:text.trim(),prazo:null});
+    renderAcoesWs();
+    state.planoStep=1;
+    addMsg('agent','Adicionada! \u2736 Quer incluir mais alguma, ou podemos continuar?','Plano de Ação');
+    setQR(['Quero adicionar mais uma','Pode continuar']);
+  } else if(state.planoStep===2){
+    const idx=pickAcao(text);
+    if(idx>=0) state.acoes[idx].prazo='3 dias';
+    else state.acoes[0].prazo='3 dias';
+    renderAcoesWs();
+    state.planoStep=3;
+    askPrazo('1 mês');
+  } else if(state.planoStep===3){
+    const idx=pickAcao(text);
+    const fallback=state.acoes.findIndex(a=>!a.prazo);
+    if(idx>=0&&!state.acoes[idx].prazo) state.acoes[idx].prazo='1 mês';
+    else if(fallback>=0) state.acoes[fallback].prazo='1 mês';
+    renderAcoesWs();
+    state.planoStep=4;
+    askPrazo('3 meses');
+  } else if(state.planoStep===4){
+    const idx=pickAcao(text);
+    const fallback=state.acoes.findIndex(a=>!a.prazo);
+    if(idx>=0&&!state.acoes[idx].prazo) state.acoes[idx].prazo='3 meses';
+    else if(fallback>=0) state.acoes[fallback].prazo='3 meses';
+    renderAcoesWs();
+    // Build prioritized 3
+    state.acoesPriorizadas=[
+      state.acoes.find(a=>a.prazo==='3 dias')||state.acoes[0],
+      state.acoes.find(a=>a.prazo==='1 mês')||state.acoes[1],
+      state.acoes.find(a=>a.prazo==='3 meses')||state.acoes[2],
+    ].filter(Boolean);
+    render5W2H();
+    state.planoStep=5;
+    await delay(400);
+    finishPlano();
+  }
+}
+
+function askPrazo(prazo){
+  const perguntas={
+    '3 dias':'Ótimo! Agora olhando para essa lista — **qual ação você consegue começar nos próximos 3 dias?**\n\nEscolha uma ou escreva o número dela.',
+    '1 mês':'Qual ação você consegue **começar e terminar em 1 mês**?',
+    '3 meses':'E qual você consegue **começar e terminar em até 3 meses**?'
+  };
+  addMsg('agent',perguntas[prazo],'Plano de Ação');
+  setQR(state.acoes.map((a,i)=>`${i+1}. ${a.text.slice(0,40)}...`).slice(0,5));
+}
+
+async function finishPlano(){
+  const nm=state.name?', '+state.name:'';
+  addMsg('agent','Seu plano está pronto'+nm+'! \u2736\n\nPriorizamos **3 ações** com prazos claros e montamos o 5W2H de cada uma — você pode ver os cards ao lado.\n\nVocê vai notar que alguns campos têm o ícone 🔍 — esses são campos que precisam de uma pesquisa da sua parte antes de preencher. Por exemplo: quem exatamente envolver, onde vai acontecer, como vai executar na prática.\n\nNão é problema! A Impulsa fica salva aqui. Pesquise, reflita e volte quando quiser completar. 🌿\n\nAntes de fechar, bora responder uma pesquisa rápida? 💛','Plano de Ação');
+  document.getElementById('ws-plano').classList.add('done');
+  document.getElementById('ws-survey').classList.add('active');
+  markDone('step3','step4');
+  // Check if TL was skipped
+  if(state.timelineItems.length===0){
+    await delay(1000);
+    addMsg('agent','Ah — antes da pesquisa: você se sente à vontade agora para nos contar um pouco da sua história? Mesmo algo pequeno enriquece muito o seu Mapa de Narrativas. Se não, tudo bem! 🌿','Sua História');
+    setQR(['Sim, quero contar agora','Não, pode finalizar']);
+    state.phase='tl_retry';
+    return;
+  }
+  state.phase='done';
+  clearQR();
+}
+
+// ============================================================
+// SURVEY
+// ============================================================
+function buildScales(){
+  [1,2,3,4,5].forEach(n=>{
+    const row=document.getElementById(`scale${n}`);
+    if(!row) return;
+    for(let i=1;i<=5;i++){
+      const btn=document.createElement('button');
+      btn.className='scale-btn';btn.textContent=i;
+      btn.onclick=()=>{
+        row.querySelectorAll('.scale-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state.survey[`q${n}`]=i;
+        checkSurveyReady();
+      };
+      row.appendChild(btn);
+    }
+  });
+}
+function checkSurveyReady(){
+  const ready=state.survey.q1&&state.survey.q2&&state.survey.q3&&state.survey.q4&&state.survey.q5;
+  document.getElementById('surveySubmit').disabled=!ready;
+}
+const MAKE_WEBHOOK = 'https://hook.us2.make.com/57uxwblwv1iut5p6ql4tsbornx23ufvv';
+
+function submitSurvey(){
+  document.getElementById('surveySubmit').style.display='none';
+  document.getElementById('surveyThanks').classList.add('show');
+  document.getElementById('ws-pdf').classList.add('active');
+
+  // Send all data to Make webhook
+  const payload = {
+    timestamp: new Date().toISOString(),
+    cadastro: {
+      nome: state.fullName || state.name || '—',
+      aniversario: state.birthday || '—',
+      email: state.email || '—',
+    },
+    objetivo: OBJECTIVES[state.objective]?.label || state.objective,
+    contexto: state.contexto,
+    timeline: state.timelineItems.map(i=>i.text),
+    swot: state.swot,
+    sintese: state.summaryText,
+    plano: {
+      acoes: state.acoes.map(a=>({acao:a.text, prazo:a.prazo||'sem prazo'})),
+      priorizadas: state.acoesPriorizadas.map(a=>({acao:a.text, prazo:a.prazo})),
+    },
+    pesquisa: {
+      clareza_carreira: state.survey.q1,
+      acolhimento: state.survey.q2,
+      recomendacao_nps: state.survey.q3,
+      intencao_retorno: state.survey.q4,
+      chance_assinar: state.survey.q5,
+    },
+  };
+
+  fetch(MAKE_WEBHOOK, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  }).catch(()=>{}); // silent fail — user experience not affected
+
+  setTimeout(()=>{
+    const nm=state.name?', '+state.name:'';
+    const objLabel=OBJECTIVES[state.objective]?.label.toLowerCase()||'carreira';
+    const msg='Obrigada'+nm+'! 💛\n\nAgora sim — seu **Mapa de Narrativas** está pronto! Ele reúne sua trajetória, SWOT, narrativa profissional, posicionamento e plano de ação para **'+objLabel+'**.\n\nGuarde, revise quando quiser e use como base nas suas próximas conversas de carreira. Você merece esse próximo passo. 🌿';
+    addMsg('agent',msg,'Seu Mapa de Narrativas');
+  }, 600);
+}
+
+// ============================================================
+// PDF
+// ============================================================
+function generatePDF(){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=18,CW=W-M*2;let y=0;
+  const BROWN=[139,94,60],GOLD=[196,154,108],GREEN=[90,138,106],
+        RED=[192,96,74],BLUE=[74,110,138],
+        TEXT=[44,36,22],MUTED=[122,106,88],BG=[250,248,244],BORDER=[232,226,213];
+  function chk(h=20){if(y+h>272){doc.addPage();y=20;}}
+
+  doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');
+  doc.setFillColor(...BROWN);doc.rect(0,0,W,50,'F');
+  doc.setFont('times','bold');doc.setFontSize(24);doc.setTextColor(255,255,255);doc.text('Impulsa',M,26);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(220,200,175);doc.text('Mapa de Narrativas',M,34);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(230,210,190);doc.text('a sua agente de carreira',M,34);
+  doc.setFontSize(8);doc.setTextColor(200,180,160);doc.text(new Date().toLocaleDateString('pt-BR',{dateStyle:'long'}),W-M,34,{align:'right'});
+  y=64;
+
+  doc.setFont('times','bold');doc.setFontSize(20);doc.setTextColor(...BROWN);doc.text('Mapa de Carreira',M,y);y+=9;
+  doc.setFont('times','italic');doc.setFontSize(12);doc.setTextColor(...GOLD);doc.text('Linha do Tempo + SWOT Pessoal',M,y);y+=5;
+  doc.setDrawColor(...GOLD);doc.setLineWidth(0.5);doc.line(M,y,M+72,y);y+=12;
+
+  // Objective banner
+  const objLabel=OBJECTIVES[state.objective]?.label||'Evolução de carreira';
+  const objAnchor=OBJECTIVES[state.objective]?.anchor||'';
+  doc.setFillColor(254,251,245);doc.setDrawColor(...GOLD);doc.setLineWidth(0.6);
+  doc.roundedRect(M,y,CW,18,2,2,'FD');
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GOLD);doc.text('OBJETIVO DEFINIDO',M+5,y+6);
+  doc.setFont('times','bold');doc.setFontSize(11);doc.setTextColor(...BROWN);doc.text(objLabel,M+5,y+13);
+  const anchorL=doc.splitTextToSize(objAnchor,CW/2);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MUTED);doc.text(anchorL,W-M-4,y+8,{align:'right'});
+  y+=26;
+
+  // Personal info
+  const infoLine=[];
+  if(state.fullName||state.name)infoLine.push(`Nome: ${state.fullName||state.name}`);
+  if(state.birthday)infoLine.push(`Aniversário: ${state.birthday}`);
+  if(state.email)infoLine.push(`E-mail: ${state.email}`);
+  if(infoLine.length){
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MUTED);
+    doc.text(infoLine.join('   ·   '),M,y);y+=12;
+  }
+
+  // Section 1
+  doc.setFillColor(...BROWN);doc.roundedRect(M,y,CW,8.5,2,2,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(255,255,255);doc.text('01  LINHA DO TEMPO DE VIDA',M+5,y+6);y+=14;
+  const tc={profissional:BLUE,pessoal:GREEN,desafio:RED,conquista:GOLD};
+  state.timelineItems.forEach((item,i)=>{
+    const lines=doc.splitTextToSize(item.text,CW-28);const cH=lines.length*4.8+12;chk(cH+12);
+    const c=tc[item.type]||GOLD;
+    doc.setFillColor(...c);doc.circle(M+3,y+4,2.2,'F');
+    if(i<state.timelineItems.length-1){doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.line(M+3,y+6.5,M+3,y+cH+8);}
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...c);doc.text(String(item.year),M+8,y+5);
+    doc.setFillColor(255,255,255);doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.roundedRect(M+20,y-1,CW-22,cH,2,2,'FD');
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...TEXT);doc.text(lines,M+24,y+5);
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...c);doc.text(typeLabel(item.type).toUpperCase(),M+24,y+cH+1);
+    y+=cH+9;
+  });
+  chk(30);
+  doc.setFillColor(254,251,245);doc.setDrawColor(...GOLD);doc.setLineWidth(0.4);doc.roundedRect(M,y,CW,26,2,2,'FD');
+  doc.setFont('times','italic');doc.setFontSize(9);doc.setTextColor(...BROWN);doc.text('✦  Padrões que emergem da sua história',M+5,y+7);
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MUTED);
+  ['Você tem histórico real de superar adversidades — isso é resiliência.','Suas conquistas mostram iniciativa e capacidade de gerar resultados concretos.','Cada fase da sua trajetória te preparou para esse próximo passo.'].forEach((p,i)=>doc.text(`→  ${p}`,M+5,y+13+i*5));
+  y+=34;
+
+  // Section 2
+  chk(14);
+  doc.setFillColor(...BROWN);doc.roundedRect(M,y,CW,8.5,2,2,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(255,255,255);doc.text('02  SWOT PESSOAL',M+5,y+6);y+=14;
+  const quads=[{key:'forcas',label:'FORÇAS',sub:'interno · positivo',c:GREEN},{key:'fraquezas',label:'FRAQUEZAS',sub:'interno · atenção',c:RED},{key:'oportunidades',label:'OPORTUNIDADES',sub:'externo · positivo',c:BLUE},{key:'ameacas',label:'AMEAÇAS',sub:'externo · atenção',c:GOLD}];
+  const hw=(CW-6)/2;
+  for(let row=0;row<2;row++){
+    const pair=[quads[row*2],quads[row*2+1]];
+    const mI=Math.max(state.swot[pair[0].key].length,state.swot[pair[1].key].length);
+    const qH=Math.max(mI*6.8+20,32);chk(qH+8);
+    pair.forEach((q,col)=>{
+      const x=M+col*(hw+6);
+      doc.setFillColor(255,255,255);doc.setDrawColor(...q.c);doc.setLineWidth(0.4);doc.roundedRect(x,y,hw,qH,2,2,'FD');
+      doc.setFillColor(...q.c);doc.roundedRect(x,y,hw,6,2,2,'F');doc.rect(x,y+3,hw,3,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(255,255,255);doc.text(q.label,x+4,y+4.5);
+      doc.setFontSize(6);doc.text(q.sub,x+hw-4,y+4.5,{align:'right'});
+      state.swot[q.key].forEach((item,i)=>{
+        doc.setTextColor(...q.c);doc.setFontSize(8);doc.text('•',x+4,y+12+i*6.8);
+        doc.setTextColor(...TEXT);doc.setFontSize(8.5);const w=doc.splitTextToSize(item,hw-14);doc.text(w[0],x+9,y+12+i*6.8);
+      });
+      if(!state.swot[q.key].length){doc.setTextColor(...MUTED);doc.setFontSize(8);doc.text('—',x+4,y+14);}
+    });
+    y+=qH+8;
+  }
+
+  // Section 3
+  chk(16);
+  doc.setFillColor(...BROWN);doc.roundedRect(M,y,CW,8.5,2,2,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(255,255,255);doc.text('03  SÍNTESE REFLEXIVA',M+5,y+6);y+=14;
+  const sumLines=doc.splitTextToSize(state.summaryText,CW-10);
+  const sumH=sumLines.length*5.4+14;chk(sumH);
+  doc.setFillColor(254,251,245);doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.roundedRect(M,y,CW,sumH,2,2,'FD');
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...TEXT);doc.text(sumLines,M+5,y+10);
+
+  // Section 4 — Narrativa
+  if(state.narrativa){
+    y+=8; chk(16);
+    // Section header — full width
+    doc.setFillColor(...BROWN); doc.roundedRect(M,y,CW,10,2,2,'F');
+    doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+    doc.text('04',M+5,y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('SUA NARRATIVA',M+14,y+7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220,200,175);
+    doc.text('Como você se conta — em qualquer contexto',M+14,y+7+4.5); y+=16;
+
+    const narrItems=[
+      { label:'RESUMO PROFISSIONAL', sub:'Para currículo e LinkedIn', text: state.narrativa.resumo,        bg:[254,251,245], border:GOLD,   icon:'01' },
+      { label:'ELEVATOR PITCH',      sub:'Para apresentações de 30s', text: state.narrativa.elevator,      bg:[249,247,243], border:GREEN,  icon:'02' },
+      { label:'"ME FALA SOBRE VOCÊ"',sub:'Para entrevistas e conversas',text:state.narrativa.meConteSobre, bg:[252,249,244], border:BLUE,   icon:'03' },
+      { label:'FRASE DE POSICIONAMENTO',sub:'Síntese de quem você é',  text: state.narrativa.frasePosicionamento, bg:[255,252,246], border:BROWN, icon:'04' },
+    ];
+
+    narrItems.forEach(item=>{
+      const lines = doc.splitTextToSize(item.text, CW-22);
+      const h = Math.max(lines.length*5.4+22, 28); chk(h+4);
+      // Card background
+      doc.setFillColor(...item.bg); doc.setDrawColor(...item.border);
+      doc.setLineWidth(0.4); doc.roundedRect(M,y,CW,h,3,3,'FD');
+      // Left accent bar
+      doc.setFillColor(...item.border); doc.roundedRect(M,y,3,h,1.5,1.5,'F');
+      // Number badge
+      doc.setFillColor(...item.border); doc.circle(M+10, y+8, 4, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(255,255,255);
+      doc.text(item.icon, M+10, y+9.5, {align:'center'});
+      // Label + sub
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...item.border);
+      doc.text(item.label, M+18, y+8);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+      doc.text(item.sub, M+18, y+13);
+      // Content
+      doc.setFont('helvetica','italic'); doc.setFontSize(8.8); doc.setTextColor(...TEXT);
+      doc.text(lines, M+18, y+19);
+      y += h+5;
+    });
+  }
+
+  // Section 5 — Posicionamento
+  if(state.posicionamento){
+    y+=6; chk(16);
+    doc.setFillColor(...BROWN); doc.roundedRect(M,y,CW,10,2,2,'F');
+    doc.setFont('times','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+    doc.text('05',M+5,y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('POSICIONAMENTO',M+14,y+7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220,200,175);
+    doc.text('Como você se apresenta ao mercado de forma estratégica',M+14,y+7+4.5); y+=16;
+
+    const posicItems=[
+      { label:'SEU DIFERENCIAL COMPETITIVO', sub:'O que só você combina', text:state.posicionamento.diferencial, accent:GREEN  },
+      { label:'HEADLINE PARA LINKEDIN',       sub:'Copie, cole e adapte',  text:state.posicionamento.headline,    accent:BLUE   },
+      { label:'COMO SE POSICIONAR',           sub:'Para o seu objetivo específico', text:state.posicionamento.como, accent:BROWN },
+    ];
+
+    posicItems.forEach(item=>{
+      const lines = doc.splitTextToSize(item.text, CW-14);
+      const h = Math.max(lines.length*5.4+20, 26); chk(h+4);
+      // Full card
+      doc.setFillColor(254,251,245); doc.setDrawColor(...item.accent);
+      doc.setLineWidth(0.3); doc.roundedRect(M,y,CW,h,3,3,'FD');
+      // Top accent stripe
+      doc.setFillColor(...item.accent); doc.roundedRect(M,y,CW,5,2,2,'F');
+      doc.rect(M,y+2,CW,3,'F');
+      // Label
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+      doc.text(item.label, M+5, y+4);
+      // Sub
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+      doc.text(item.sub, M+5, y+11);
+      // Content
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.8); doc.setTextColor(...TEXT);
+      doc.text(lines, M+5, y+17);
+      y += h+5;
+    });
+    y+=4;
+  }
+
+  // Section 6 — Plano de Ação
+  if(state.acoesPriorizadas&&state.acoesPriorizadas.length){
+    y+=8;chk(16);
+    doc.setFillColor(...BROWN);doc.roundedRect(M,y,CW,8.5,2,2,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(255,255,255);doc.text('06  PLANO DE AÇÃO',M+5,y+6);y+=14;
+
+    const tagColors={'3 dias':GREEN,'1 mês':BLUE,'3 meses':GOLD};
+    const hw=(CW-6)/3;
+    const cardH=52;chk(cardH+8);
+
+    state.acoesPriorizadas.forEach((a,col)=>{
+      const x=M+col*(hw+3);
+      const tc=tagColors[a.prazo]||GOLD;
+      doc.setFillColor(255,255,255);doc.setDrawColor(...tc);doc.setLineWidth(0.5);doc.roundedRect(x,y,hw,cardH,2,2,'FD');
+      doc.setFillColor(...tc);doc.roundedRect(x,y,hw,6,2,2,'F');doc.rect(x,y+3,hw,3,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(255,255,255);doc.text((a.prazo||'').toUpperCase(),x+4,y+4.5);
+      const aLines=doc.splitTextToSize(a.text,hw-8);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...TEXT);doc.text(aLines.slice(0,3),x+4,y+11);
+    });
+    y+=cardH+10;
+
+    // 5W2H rows
+    const labels=['O quê','Por quê','Quem','Quando','Como'];
+    const keys=['text','why','who','when','how'];
+    const w2hFull=state.acoesPriorizadas.map(a=>({
+      text:a.text,
+      why:'Contribui para '+( OBJECTIVES[state.objective]?.label.toLowerCase()||'seu objetivo'),
+      who:a.prazo==='3 dias'?'Você mesma':'Você + apoiadores',
+      when:a.prazo==='3 dias'?'Próximos 3 dias':a.prazo==='1 mês'?'Próximos 30 dias':'Próximos 90 dias',
+      how:'Com base nas suas forças e oportunidades identificadas',
+    }));
+
+    chk(labels.length*7+12);
+    doc.setFillColor(254,251,245);doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);
+    const tableH=labels.length*7+10;
+    doc.roundedRect(M,y,CW,tableH,2,2,'FD');
+    // Header row
+    const colW=CW/4;
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GOLD);
+    ['',state.acoesPriorizadas[0]?.prazo||'',state.acoesPriorizadas[1]?.prazo||'',state.acoesPriorizadas[2]?.prazo||''].forEach((h,i)=>doc.text(h.toUpperCase(),M+4+i*colW,y+6));
+    labels.forEach((lbl,row)=>{
+      const ry=y+10+row*7;
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GOLD);doc.text(lbl,M+4,ry);
+      w2hFull.forEach((d,col)=>{
+        const val=String(d[keys[row]]||'').slice(0,35);
+        doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...TEXT);doc.text(val,M+4+(col+1)*colW,ry);
+      });
+    });
+    y+=tableH+8;
+  }
+
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){doc.setPage(p);doc.setFillColor(...BROWN);doc.rect(0,287,W,10,'F');doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(220,200,180);doc.text('Impulsa — a sua agente de carreira',M,293);doc.text(`${p} / ${pages}`,W-M,293,{align:'right'});}
+
+  doc.save(`impulsa-mapa-de-narrativas-${state.objective||'carreira'}.pdf`);
+}
+
+// ============================================================
+// SEND
+// ============================================================
+async function send(text){
+  if(!text.trim())return;
+  clearQR();addMsg('user',text);
+  document.getElementById('userInput').value='';
+  document.getElementById('userInput').style.height='40px';
+  if(['cadastro_nome','cadastro_aniversario','cadastro_email'].includes(state.phase)) await handleCadastro(text);
+  else if(state.phase==='objetivo') await handleObjetivo(text);
+  else if(state.phase==='descoberta') await handleDescoberta(text);
+  else if(state.phase==='contexto') await handleContexto(text);
+  else if(state.phase==='timeline') await handleTimeline(text);
+  else if(state.phase==='narrativa') await handleNarrativa(text);
+  else if(state.phase==='posicionamento') await handlePosicionamento(text);
+  else if(state.phase==='plano') await handlePlano(text);
+  else if(state.phase==='tl_retry') await handleTlRetry(text);
+  else if(state.phase==='swot_confirm') await handleSwotConfirm(text);
+  else if(state.phase==='swot') await handleSwot(text);
+  saveProgress();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+// ============================================================
+// LOCALSTORAGE — save & restore
+// ============================================================
+const SAVE_KEY = 'impulsa_state_v1';
+
+function saveProgress(){
+  try {
+    const snap = {
+      phase: state.phase,
+      name: state.name,
+      fullName: state.fullName||'',
+      birthday: state.birthday,
+      email: state.email,
+      objective: state.objective,
+      contexto: state.contexto,
+      contextoStep: state.contextoStep||0,
+      tlStep: state.tlStep,
+      tlPeriodo: state.tlPeriodo||'15',
+      timelineItems: state.timelineItems,
+      swot: state.swot,
+      swotStep: state.swotStep,
+      swotSubStep: state.swotSubStep,
+      summaryText: state.summaryText,
+      survey: state.survey,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+  } catch(e){}
+}
+
+function clearProgress(){
+  try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+}
+
+function restoreProgress(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const snap = JSON.parse(raw);
+    Object.assign(state, snap);
+    return true;
+  } catch(e){ return false; }
+}
+
+function rebuildUI(){
+  // Rebuild cadastro card
+  if(state.fullName||state.name){
+    const el=document.getElementById('cad-nome');
+    el.textContent=state.fullName||state.name; el.classList.remove('pending');
+  }
+  if(state.birthday){
+    const el=document.getElementById('cad-aniversario');
+    el.textContent=state.birthday; el.classList.remove('pending');
+  }
+  if(state.email){
+    const el=document.getElementById('cad-email');
+    el.textContent=state.email; el.classList.remove('pending');
+  }
+  // Restore objective card
+  if(state.objective){
+    const obj=OBJECTIVES[state.objective];
+    document.getElementById('objAnchorValue').textContent=obj.label;
+    document.getElementById('objAnchorSub').textContent=obj.anchor;
+    updateContextoCard();
+  }
+  // Restore timeline
+  if(state.timelineItems.length){
+    document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
+    showInsights();
+  }
+  // Restore SWOT
+  renderSwot();
+  if(state.summaryText){
+    document.getElementById('swotSummaryText').textContent=state.summaryText;
+    document.getElementById('swotSummary').style.display='block';
+  }
+  // Restore section visibility
+  const phases = ['cadastro_nome','cadastro_aniversario','cadastro_email'];
+  if(!phases.includes(state.phase)){
+    document.getElementById('ws-cadastro').classList.add('done');
+    document.getElementById('ws-objetivo').classList.add('active');
+  }
+  if(!['objetivo','contexto'].includes(state.phase) && state.objective){
+    document.getElementById('ws-objetivo').classList.add('done');
+    document.getElementById('ws-timeline').classList.add('active');
+    markDone('step0','stepObj');
+    markDone('stepObj','step1');
+  }
+  const swotPhases=['swot','swot_confirm','tl_retry','done'];
+  if(swotPhases.includes(state.phase)||state.swotStep>0){
+    document.getElementById('ws-timeline').classList.add('done');
+    document.getElementById('ws-swot').classList.add('active');
+    markDone('step1','step2');
+  }
+  if(state.phase==='done'||state.summaryText){
+    document.getElementById('ws-swot').classList.add('done');
+    document.getElementById('ws-survey').classList.add('active');
+    document.getElementById('ws-pdf').classList.add('active');
+    markDone('step2','step3');
+  }
+}
+
+
+
+window.addEventListener('load', function(){
+  document.getElementById('sendBtn').addEventListener('click',()=>send(document.getElementById('userInput').value));
+  document.getElementById('userInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(document.getElementById('userInput').value);}});
+  document.getElementById('userInput').addEventListener('input',function(){this.style.height='40px';this.style.height=Math.min(this.scrollHeight,110)+'px';});
+
+  buildScales();
+  renderSwot();
+
+  const restored = restoreProgress();
+  if(restored && state.phase !== 'cadastro_nome'){
+    rebuildUI();
+    setTimeout(function(){
+      const nm = state.name ? state.name : '';
+      addMsg('agent','Bem-vinda de volta'+( nm ? ', '+nm : '')+'. 🌿\n\nEncontrei seu progresso salvo. Podemos continuar de onde paramos!','Retomando');
+      // Resume from current phase
+      if(state.phase==='cadastro_aniversario'){
+        addMsg('agent','Onde paramos: qual é a sua **data de aniversário**?\n\n<span class="optional-tag">opcional — pode pular se preferir</span>','Cadastro');
+        setQR(['Prefiro não informar'],'Pular');
+      } else if(state.phase==='cadastro_email'){
+        addMsg('agent','Qual é o seu **e-mail**?\n\n<span class="optional-tag">opcional — pode pular se preferir</span>','Cadastro');
+        setQR(['Prefiro não informar'],'Pular');
+      } else if(state.phase==='objetivo'){
+        addMsg('agent','Qual é o seu **objetivo de carreira** nesse momento?','Seu Objetivo');
+        setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira','🤍 Não sei ainda — preciso de ajuda']);
+      } else if(state.phase==='contexto'){
+        askContexto();
+      } else if(state.phase==='timeline'){
+        addMsg('agent','Continuando sua linha do tempo. Me conta mais sobre sua história...','Linha do Tempo — História de Vida');
+        setQR(['Vou continuar contando','Prefiro não contar agora']);
+      } else if(state.phase==='swot_confirm'){
+        addMsg('agent','Continuando para a SWOT Pessoal. Podemos começar?','SWOT Pessoal');
+        setQR(['Sim, vamos!','Pode continuar 🌿']);
+      } else if(state.phase==='swot'){
+        const q=getSwotQs()[state.swotStep]||getSwotQs()[0];
+        addMsg('agent','Continuando sua SWOT. '+q.intro, q.phase);
+        askSwotQuadrant(q);
+      } else if(state.phase==='done'){
+        addMsg('agent','Seu mapa já está completo! Seu Mapa de Narrativas está disponível abaixo. 🌿','Concluído');
+        clearQR();
+      }
+    }, 400);
+  } else {
+    setTimeout(function(){
+      addMsg('agent','Olá! Seja muito bem-vinda. 🌿\n\nEstou aqui para caminhar com você nessa jornada de carreira.\n\nPrimeiro, adoraria saber: qual é o seu **nome e sobrenome**?','Boas-vindas');
+    }, 400);
+  }
+});
+</script>
+</body>
+</html>
