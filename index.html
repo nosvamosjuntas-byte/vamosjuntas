@@ -479,7 +479,7 @@ const state = {
   phase:'cadastro_nome', // cadastro_nome | cadastro_aniversario | cadastro_email | objetivo | timeline | swot | done
   name:'', birthday:'', email:'',
   objective:null,
-  tlStep:0, tlOpeningDone:false, swotStep:0, swotSubStep:0,
+  tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, swotStep:0, swotSubStep:0,
   timelineItems:[],
   swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
   summaryText:'',
@@ -607,7 +607,46 @@ async function handleCadastro(text){
 
   } else if(state.phase==='cadastro_aniversario'){
     const skip=/^(pular|não|nao|skip|prefiro não|prefiro nao)/i.test(text.trim());
-    state.birthday=skip?'':text.trim();
+
+    if(!skip){
+      // Validate format DD/MM/AAAA
+      const raw = text.trim();
+      const match = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+
+      if(!match){
+        showTyping(); await delay(800); removeTyping();
+        addMsg('agent','Hmm, não consegui entender essa data. 🌿 Pode escrever no formato **DD/MM/AAAA**? Por exemplo: 15/03/1990','Cadastro');
+        return;
+      }
+
+      const dia = parseInt(match[1]);
+      const mes = parseInt(match[2]);
+      const ano = parseInt(match[3]);
+      const anoAtual = new Date().getFullYear();
+      const anoMin = 1930;
+      const anoMax = anoAtual - 14;
+
+      // Validate ranges
+      if(mes < 1 || mes > 12 || dia < 1 || dia > 31){
+        showTyping(); await delay(800); removeTyping();
+        addMsg('agent','Essa data não parece válida. Pode conferir e tentar de novo no formato **DD/MM/AAAA**?','Cadastro');
+        return;
+      }
+      if(ano < anoMin || ano > anoMax){
+        showTyping(); await delay(800); removeTyping();
+        addMsg('agent',`Para usar a Impulsa é preciso ter pelo menos 14 anos. Se o ano estiver certo e você preferir não informar, pode pular! 🌿`,'Cadastro');
+        setQR(['Prefiro não informar']);
+        return;
+      }
+
+      // Format nicely as DD/MM/AAAA
+      const diaStr = String(dia).padStart(2,'0');
+      const mesStr = String(mes).padStart(2,'0');
+      state.birthday = `${diaStr}/${mesStr}/${ano}`;
+    } else {
+      state.birthday = '';
+    }
+
     const el=document.getElementById('cad-aniversario');
     el.textContent=state.birthday||'—';
     el.classList.remove('pending');
@@ -638,7 +677,7 @@ async function handleCadastro(text){
     addMsg('agent',(firstName?'Obrigada, '+firstName+'! ':'Obrigada! ')+'🌿\n\nSabemos que a vida é composta por fases e ciclos. Alguns planejados, outros que nos surpreendem no meio do caminho.\n\nA Impulsa quer te ajudar a construir a narrativa certa para você ter:\n\n✦ Sua carreira organizada com informações que ajudam a buscar seu objetivo\n✦ Argumentos, posicionamento e conteúdo sobre você mesma\n✦ Desenvolvimento por meio do autoconhecimento\n✦ Visibilidade do seu próximo passo com um plano de ação','Bem-vinda à Impulsa');
 
     showTyping(); await delay(2800); removeTyping();
-    addMsg('agent','Imagine que você leva na sua bolsa a sua história, seus resultados, projetos, receios e habilidades — mas são tantas informações que você ainda não parou para organizá-las de modo que te ajudem a dar passos maiores.\n\nSabe aquela conversa que você adiou por receio de não saber o que falar depois de um "Não"? 🌿\n\nAqui, todo esse conteúdo é organizado para que você use na hora e no lugar certo — inclusive em conversas que podem te impulsionar para onde você quer chegar.','');
+    addMsg('agent','Imagine que desde o primeiro dia de trabalho você carrega uma bolsa. 👜\n\nDentro dela foram entrando, aos poucos, tudo que você viveu: as conquistas que ninguém viu, os projetos que você entregou no limite, os medos que você engoliu antes de uma reunião importante, as habilidades que você desenvolveu quase sem perceber, as histórias que moldaram quem você é hoje.\n\nCom o tempo, essa bolsa ficou cheia. Pesada, até. Mas bagunçada — porque ninguém te ensinou a organizá-la.\n\nA Impulsa existe para isso: abrir essa bolsa com você, organizar o que está dentro e te mostrar o quanto você tem a oferecer — de um jeito que você consiga usar na hora e no lugar certo.\n\nInclusive naquelas conversas que você adiou por não saber o que falar depois de um "não". 🌿','');
 
     showTyping(); await delay(2200); removeTyping();
     addMsg('agent','Agora me conta: **qual é o seu objetivo de carreira nesse momento?**\n\nEscolha o que faz mais sentido para essa fase. Lembre: você pode voltar e atualizar quando quiser — a Impulsa foi feita para acompanhar você em diferentes momentos da vida. 🌱','Seu Objetivo');
@@ -787,15 +826,53 @@ async function handleDescoberta(text){
   } else if(state.descobertaStep === 2){
     state.descoberta.obstaculo = OBSTACULO_MAP[text] || 'clareza';
 
-    // Suggest objective based on matrix
+    // Score all objectives based on visao + estado + obstaculo
+    const visao = (state.descoberta.visao || '').toLowerCase();
     const estadoKey = state.descoberta.estado;
     const obstKey = state.descoberta.obstaculo;
-    const sugestao = (DESCOBERTA_LOGIC[estadoKey]||DESCOBERTA_LOGIC.animada)[obstKey] || 'promocao';
-    const obj = OBJECTIVES[sugestao];
 
-    // Second suggestion — closest alternative
-    const alternativas = Object.keys(OBJECTIVES).filter(k=>k!==sugestao);
-    const alt = alternativas[Math.floor(Math.random()*alternativas.length)];
+    const scores = {
+      recolocacao: 0, promocao: 0, aumento: 0,
+      mudanca: 0, retorno: 0, pivotar: 0
+    };
+
+    // Score from visão (free text — most important signal)
+    if(/desempre|sem trabalho|emprego|recoloc|vaga|procurando/i.test(visao))      scores.recolocacao += 4;
+    if(/promoç|crescer|líder|cargo|reconhec|subir/i.test(visao))                  scores.promocao    += 4;
+    if(/salário|ganhar mais|dinheiro|financ|aumento|remunera/i.test(visao))       scores.aumento     += 4;
+    if(/mudar de empresa|nova empresa|outra área|novo setor|sair daqui/i.test(visao)) scores.mudanca += 4;
+    if(/maternidade|licença|filh|voltei|retorno|bebê/i.test(visao))               scores.retorno     += 4;
+    if(/mudar de área|nova carreira|outro caminho|pivotar|trocar de profissão|reinvent/i.test(visao)) scores.pivotar += 4;
+    if(/perdida|sem direção|não sei|clareza|propósito|o que quero/i.test(visao))  { scores.pivotar += 2; scores.mudanca += 1; }
+    if(/cansada|esgotada|tóxico|ambiente ruim|não suporto/i.test(visao))          { scores.mudanca += 3; scores.pivotar += 1; }
+    if(/reconhec|invisível|não me veem|valor/i.test(visao))                       { scores.promocao += 2; scores.aumento += 2; }
+
+    // Score from estado emocional
+    const estadoBonus = {
+      estagnada:    {promocao:2, aumento:1},
+      esgotada:     {mudanca:2, pivotar:2},
+      perdida:      {pivotar:3, mudanca:1},
+      desempregada: {recolocacao:4},
+      retornando:   {retorno:4},
+      animada:      {promocao:2, mudanca:1},
+    };
+    Object.entries(estadoBonus[estadoKey]||{}).forEach(([k,v])=>scores[k]+=v);
+
+    // Score from obstáculo
+    const obstBonus = {
+      clareza:     {pivotar:2, mudanca:1},
+      medo:        {mudanca:1, pivotar:1},
+      financeiro:  {aumento:3, recolocacao:1},
+      apoio:       {recolocacao:2, promocao:1},
+    };
+    Object.entries(obstBonus[obstKey]||{}).forEach(([k,v])=>scores[k]+=v);
+
+    // Pick top 2 by score
+    const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+    const sugestao = ranked[0][0];
+    const alt = ranked[1][0];
+
+    const obj = OBJECTIVES[sugestao];
     const objAlt = OBJECTIVES[alt];
 
     state.descobertaStep = 3;
@@ -889,13 +966,15 @@ function guessType(t){
 function typeLabel(t){return{profissional:'Profissional',pessoal:'Pessoal',desafio:'Desafio superado',conquista:'Conquista'}[t]||t;}
 
 function addTLItem(text,type){
-  const baseYear = new Date().getFullYear();
-  const periodo = parseInt(state.tlPeriodo||'15');
-  const total = state.timelineItems.length;
-  const step = Math.floor(periodo / (TL_APROFUNDAMENTOS.length+1));
-  const y = baseYear - periodo + (total * step) + Math.floor(Math.random()*2);
-  state.timelineItems.push({text,type,year:Math.min(y, baseYear)});
-  document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
+  const year = extractYear(text) || null;
+  // Clean year from text if found
+  const cleanText = text.replace(/\b(19[5-9]\d|20[0-2]\d)\b/,'').replace(/\s{2,}/g,' ').trim();
+  state.timelineItems.push({text: year ? cleanText : text, type, year});
+  renderTL();
+}
+
+function renderTL(){
+  document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year||'—'}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
 }
 
 function showInsights(){
@@ -964,36 +1043,185 @@ async function handleTimeline(text){
     }
   }
 
-  // Detect if it's the opening message (tlStep===0) — needs deeper follow-up before moving on
-  const isOpening = state.tlStep === 0;
+  // isOpening = true only on the very first message (tlStep===0, not yet done opening)
+  const isOpening = state.tlStep === 0 && !state.tlOpeningDone && !state.tlAwaitingContinue;
 
-  addTLItem(text, guessType(text));
+  const isNavGeneric = /^(vou começar|vou continuar|prefiro começar|pode seguir|não, pode|sim, quero|mais uma|pode continuar|sim, tenho|não, pode)/i.test(text.trim());
+  if(!isNavGeneric) addTLItem(text, guessType(text));
   showTyping(); await delay(1400); removeTyping();
 
   if(isOpening){
-    // React to what she said and ask to tell more before moving to guided questions
-    state.tlOpeningDone = true;
-    addMsg('agent', reactionMsg + '\n\nMe conta mais sobre isso — o que aconteceu?', 'Linha do Tempo — História de Vida');
+    const wordCount = text.trim().split(/\s+/).length;
+    if(wordCount >= 40){
+      // Long enough — skip follow-up, go straight to "share more?" question
+      state.tlOpeningDone = true; // mark so next block fires
+    } else {
+      // Short — react and ask her to tell more + the year
+      state.tlOpeningDone = true;
+      state.tlStep = 1; // advance so isOpening won't fire again
+      addMsg('agent', reactionMsg + '\n\nMe conta como foi — e me diz em que ano aconteceu?', 'Linha do Tempo — História de Vida');
+      clearQR();
+      return;
+    }
+  }
+
+  // After the one follow-up — transition gently to guided questions
+  if(state.tlOpeningDone){
+    state.tlOpeningDone = false;
+    addTLItem(text, guessType(text));
+    showTyping(); await delay(1200); removeTyping();
+    addMsg('agent', 'Obrigada por compartilhar isso. 🌿\n\nVocê quer contar outros fatos da sua vida até hoje? Algo marcante que você não quer esquecer — que impacta positivamente ou traz alguma lição de aprendizado?\n\nPode ser profissional, pessoal ou os dois. Aqui não tem certo ou errado.', 'Linha do Tempo — História de Vida');
+    setQR(['Sim, quero contar mais', 'Pode seguir em frente']);
+    state.tlAwaitingContinue = true;
+    return;
+  }
+
+  // She chose to continue or skip after transition
+  if(state.tlAwaitingContinue){
+    state.tlAwaitingContinue = false;
+    const skip = /^(pode seguir|não|nao|pular|seguir)/i.test(text.trim());
+    if(skip){
+      showTyping(); await delay(900); removeTyping();
+      addMsg('agent', 'Tudo bem! Vamos em frente. 🌿', 'Linha do Tempo — História de Vida');
+      await delay(600);
+      // Jump straight to guided questions
+    } else {
+      // She wants to share more — let her write freely, then come back here
+      const isGenericCont = /^(sim, quero|sim, mais|pode seguir|não)/i.test(text.trim());
+      if(!isGenericCont) addTLItem(text, guessType(text));
+      showTyping(); await delay(900); removeTyping();
+      addMsg('agent', 'Anotado. ✦ Tem mais alguma coisa que queira trazer? Se sim, me conte e inclua o ano.', 'Linha do Tempo — História de Vida');
+      setQR(['Sim, mais uma coisa', 'Não, pode seguir']);
+      state.tlAwaitingContinue = true;
+      return;
+    }
+  }
+
+  // If answer is short (QR pick or < 8 words), ask a quick follow-up before moving on
+  const wordCount2 = text.trim().split(/\s+/).length;
+  const isShortAnswer = wordCount2 < 8 && !state.tlJustFollowedUp;
+
+  if(isShortAnswer){
+    state.tlJustFollowedUp = true;
+    const deepens = [
+      'Me conta um pouco mais — e em que ano foi isso?',
+      'Que interessante! Me conta mais e me diz o ano.',
+      'Isso é importante. Me fala um pouco mais — e quando foi?',
+      'Quero entender melhor — o que aconteceu e em que ano?',
+    ];
+    const d = deepens[state.tlStep % deepens.length];
+    showTyping(); await delay(900); removeTyping();
+    addMsg('agent', d, 'Linha do Tempo — História de Vida');
     clearQR();
     return;
   }
 
+  state.tlJustFollowedUp = false;
   showTyping(); await delay(1000); removeTyping();
+
+  // Detect emotional tone to pick the right transition
+  const txtLow = text.toLowerCase();
+  const isDifficult = /ruim|difícil|dificil|deslocad|perdid|sozi|triste|medo|assust|chorei|chor|esgot|demiti|demiss|fracass|insegur|dor|sofriment|tóxico|toxic|horrível|terrível|pesad|luto|abandon|reject|humilh/i.test(txtLow);
+  const isPositive = /incrível|ótimo|orgulh|feliz|realiz|conquistei|cresci|aprendi|melhor|gratid|amor|alegr|confiança|superou|superei|transformei|impacto|bonit|especial|libertei/i.test(txtLow);
+
+  let trans;
+  if(isDifficult){
+    const hard = ['Sinto muito que você passou por isso. 🌿','Que fase pesada. Obrigada por confiar isso aqui. 🌿','Isso não é fácil. E você está aqui, contando — isso importa. 🌿','Fases assim deixam marcas. Obrigada por trazer isso. 🌿'];
+    trans = hard[state.tlStep % hard.length];
+  } else if(isPositive){
+    const good = ['Que conquista linda! ✦','Isso é muito bonito. ✦','Adoro ouvir isso. ✦','Que fase importante e positiva! ✦'];
+    trans = good[state.tlStep % good.length];
+  } else {
+    const neutral = ['Faz todo sentido. ✦','Anotado. ✦','Isso ficou registrado. ✦','Que fase importante.'];
+    trans = neutral[state.tlStep % neutral.length];
+  }
 
   if(state.tlStep < TL_APROFUNDAMENTOS.length){
     const aprofund = TL_APROFUNDAMENTOS[state.tlStep];
-    // Prepend a short reaction to her last message before the next question
-    const transition = ['Faz todo sentido. ✦','Obrigada por isso. 🌿','Isso ficou registrado. ✦','Que fase importante.'];
-    const trans = transition[state.tlStep % transition.length];
     addMsg('agent', trans + '\n\n' + aprofund.q(state.name), 'Linha do Tempo — História de Vida');
     setQR([...aprofund.qr, 'Prefiro não entrar nesse assunto']);
     state.tlStep++;
   } else {
+    // Before finishing, ask one last time if she wants to add anything
+    showTyping(); await delay(1000); removeTyping();
+    addMsg('agent', trans + '\n\nAntes de seguirmos — tem mais alguma coisa da sua história que você quer registrar aqui? Algum fato, conquista ou momento que sente que não pode ficar de fora?', 'Linha do Tempo — História de Vida');
+    setQR(['Não, pode seguir', 'Sim, tenho mais uma coisa']);
+    state.tlFinalCheck = true;
+  }
+}
+
+async function handleTlFinalCheck(text){
+  state.tlFinalCheck = false;
+  const skip = /^(não|nao|pode seguir|seguir|pular)/i.test(text.trim());
+  if(skip){
+    showTyping(); await delay(800); removeTyping();
+    addMsg('agent', 'Que história linda a sua. 🌿 Obrigada por compartilhar tudo isso.\n\nAgora vamos para a próxima etapa — ela vai te ajudar a enxergar seus padrões com clareza.', 'Linha do Tempo — História de Vida');
+    await delay(1200);
     await finishTimeline();
+  } else {
+    // She wants to add more — record and ask again
+    addTLItem(text, guessType(text));
+    showTyping(); await delay(900); removeTyping();
+    addMsg('agent', 'Anotado. ✦ Tem mais alguma coisa?', 'Linha do Tempo — História de Vida');
+    setQR(['Não, pode seguir', 'Sim, mais uma']);
+    state.tlFinalCheck = true;
   }
 }
 
 async function finishTimeline(){
+  // Filter out empty/generic items before asking years
+  state.timelineItems = state.timelineItems.filter(i => i.text && i.text.trim().length > 3);
+  if(state.timelineItems.length === 0){
+    completeTL();
+    return;
+  }
+  state.tlYearIdx = 0;
+  showTyping(); await delay(1000); removeTyping();
+  askTLYear();
+}
+
+function extractYear(text){
+  const m = text.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  return m ? parseInt(m[1]) : null;
+}
+
+function askTLYear(){
+  // Skip items that already have a year
+  while(state.tlYearIdx < state.timelineItems.length && state.timelineItems[state.tlYearIdx].year){
+    state.tlYearIdx++;
+  }
+  if(state.tlYearIdx >= state.timelineItems.length){
+    state.timelineItems.sort((a,b)=>a.year-b.year);
+    renderTL();
+    completeTL();
+    return;
+  }
+  const item = state.timelineItems[state.tlYearIdx];
+  const remaining = state.timelineItems.filter(i=>!i.year).length;
+  addMsg('agent', `Quase lá! Preciso do ano de ${remaining} momento${remaining>1?'s':''}. \n\n📌 *"${item.text}"*\n\nEm que ano isso aconteceu?`, 'Linha do Tempo — Anos');
+  const anoAtual = new Date().getFullYear();
+  const anos = [];
+  for(let y = anoAtual; y >= anoAtual - 15; y--) anos.push(String(y));
+  setQR(anos.slice(0,10));
+  state.phase = 'tl_years';
+}
+
+async function handleTLYears(text){
+  const ano = parseInt(text.trim());
+  const anoAtual = new Date().getFullYear();
+  if(isNaN(ano) || ano < 1950 || ano > anoAtual){
+    showTyping(); await delay(600); removeTyping();
+    addMsg('agent', `Por favor, insira um ano válido entre 1950 e ${anoAtual}. Ex: 2018`, 'Linha do Tempo — Anos');
+    return;
+  }
+  state.timelineItems[state.tlYearIdx].year = ano;
+  renderTL();
+  state.tlYearIdx++;
+  showTyping(); await delay(700); removeTyping();
+  askTLYear();
+}
+
+async function completeTL(){
   showInsights();
   document.getElementById('ws-timeline').classList.add('done');
   markDone('step1','step2');
@@ -1811,7 +2039,11 @@ async function send(text){
   else if(state.phase==='objetivo') await handleObjetivo(text);
   else if(state.phase==='descoberta') await handleDescoberta(text);
   else if(state.phase==='contexto') await handleContexto(text);
-  else if(state.phase==='timeline') await handleTimeline(text);
+  else if(state.phase==='tl_years') await handleTLYears(text);
+  else if(state.phase==='timeline'){
+    if(state.tlFinalCheck) await handleTlFinalCheck(text);
+    else await handleTimeline(text);
+  }
   else if(state.phase==='narrativa') await handleNarrativa(text);
   else if(state.phase==='posicionamento') await handlePosicionamento(text);
   else if(state.phase==='plano') await handlePlano(text);
@@ -1954,8 +2186,9 @@ window.addEventListener('load', function(){
       } else if(state.phase==='contexto'){
         askContexto();
       } else if(state.phase==='timeline'){
+        const tlQ = TL_APROFUNDAMENTOS[state.tlStep] || TL_APROFUNDAMENTOS[0];
         addMsg('agent','Continuando sua linha do tempo. Me conta mais sobre sua história...','Linha do Tempo — História de Vida');
-        setQR(['Vou continuar contando','Prefiro não contar agora']);
+        clearQR();
       } else if(state.phase==='swot_confirm'){
         addMsg('agent','Continuando para a SWOT Pessoal. Podemos começar?','SWOT Pessoal');
         setQR(['Sim, vamos!','Pode continuar 🌿']);
