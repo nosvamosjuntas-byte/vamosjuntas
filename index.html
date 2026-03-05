@@ -972,18 +972,10 @@ async function handleTimeline(text){
 
   if(isOpening){
     // React to what she said and ask to tell more before moving to guided questions
-    state.tlStep = 0; // don't advance yet
     state.tlOpeningDone = true;
     addMsg('agent', reactionMsg + '\n\nMe conta mais sobre isso — o que aconteceu?', 'Linha do Tempo — História de Vida');
     clearQR();
     return;
-  }
-
-  // After she elaborated on opening, or on subsequent answers — react + next question
-  if(state.tlOpeningDone && state.tlStep === 0){
-    // She just elaborated — now move to guided questions
-    state.tlOpeningDone = false;
-    addTLItem(text, guessType(text));
   }
 
   showTyping(); await delay(1000); removeTyping();
