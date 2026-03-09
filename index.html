@@ -77,6 +77,12 @@
   .send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:10px;cursor:pointer;color:white;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;flex-shrink:0;}
   .send-btn:hover{opacity:0.85;}
 
+  /* AVALIAÇÃO CARDS */
+  .av-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;border-left:3px solid var(--gold);}
+  .av-card-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:5px;}
+  .av-card-value{font-size:0.84rem;color:var(--text);line-height:1.6;}
+  .av-card-value.pending{color:var(--text-dim);font-style:italic;font-size:0.78rem;}
+
   /* WORKSPACE */
   .workspace{flex:1;overflow-y:auto;padding:32px 36px;display:flex;flex-direction:column;gap:32px;}
   .ws-section{opacity:0.22;transition:opacity 0.4s;pointer-events:none;}
@@ -310,6 +316,18 @@
         <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);font-weight:600;margin-bottom:10px;">Seu contexto</div>
         <div id="contextoItems"></div>
       </div>
+    </div>
+
+    <!-- AVALIAÇÃO DE DESEMPENHO -->
+    <div class="ws-section" id="ws-avaliacao" style="display:none;">
+      <div class="section-header">
+        <div class="section-num">📋</div>
+        <div>
+          <div class="section-title">Autorreflexão de Desempenho</div>
+          <div class="section-sub">Suas respostas vão compor o documento final</div>
+        </div>
+      </div>
+      <div id="avaliacaoItems" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
 
     <!-- LINHA DO TEMPO -->
@@ -599,7 +617,9 @@ async function handleModeSelect(text){
     state.phase = 'avaliacao';
     state.avaliacaoStep = 0;
     state.avaliacao = {};
-    document.getElementById('ws-objetivo').classList.add('active');
+    document.getElementById('ws-avaliacao').style.display = '';
+    document.getElementById('ws-avaliacao').classList.add('active');
+    renderAvaliacaoCards();
     addMsg('agent','Ótima escolha — essa conversa pode mudar o rumo da sua avaliação. 🌿\n\nVamos montar juntas a sua **autorreflexão de desempenho** — um documento que você pode usar antes ou durante a sua avaliação.\n\nVou te fazer algumas perguntas. Responda com o que vier — sem filtro.\n\nPrimeiro: **qual foi o período avaliado?** Por exemplo: Janeiro a Dezembro de 2024, ou 2º semestre de 2024.','Avaliação de Desempenho');
     clearQR();
   } else {
@@ -619,7 +639,8 @@ async function handleModeSelect(text){
 // ============================================================
 const AVALIACAO_QS = [
   { key:'periodo',      q:'Qual foi o **período avaliado**? (ex: Janeiro a Dezembro de 2024)',          qr:[] },
-  { key:'metas',        q:'Quais eram as suas **principais metas** para esse período? E você as alcançou?', qr:['Alcancei todas','Alcancei a maioria','Alcancei parcialmente','Não alcancei as que esperava'] },
+  { key:'metas',        q:'Quais eram as suas **principais metas** para esse período? Pode listar mesmo, uma por linha se quiser.', qr:[] },
+  { key:'metas_alcance', q:'E como foi — você as alcançou?', qr:['Alcancei todas','Alcancei a maioria','Alcancei parcialmente','Não alcancei as que esperava'] },
   { key:'projetos',     q:'Quais foram os **projetos ou entregas mais importantes** que você fez?',    qr:[] },
   { key:'alem',         q:'O que você fez que estava **além do esperado** — algo que foi além das suas responsabilidades formais?', qr:['Mentoria ou apoio a colegas','Processo novo que não era meu','Problema que resolvi sem ser acionada','Assumi responsabilidade em momento de crise'] },
   { key:'dificuldades', q:'Que **dificuldades ou obstáculos** você enfrentou? E como você lidou com eles?', qr:[] },
@@ -630,10 +651,39 @@ const AVALIACAO_QS = [
   { key:'reconhecimento', q:'Em que você gostaria de ser **reconhecida** — o que você faz bem que sente que ainda não foi visto?', qr:[] },
 ];
 
+const AVALIACAO_LABELS = {
+  periodo: 'Período avaliado',
+  metas: 'Minhas metas',
+  metas_alcance: 'O que alcancei',
+  projetos: 'Projetos entregues',
+  alem: 'Além do esperado',
+  dificuldades: 'Desafios enfrentados',
+  pedido: 'O que quero pedir',
+  sentimento: 'Como estou me sentindo',
+  sugestoes: 'Sugestões para mim e minha liderança',
+  melhorias: '3 ações de melhoria',
+  reconhecimento: 'Em que quero ser reconhecida',
+};
+
+function renderAvaliacaoCards(){
+  const container = document.getElementById('avaliacaoItems');
+  if(!container) return;
+  const keys = Object.keys(AVALIACAO_LABELS);
+  container.innerHTML = keys.map(k => {
+    const val = state.avaliacao[k];
+    const label = AVALIACAO_LABELS[k];
+    return `<div class="av-card">
+      <div class="av-card-label">${label}</div>
+      <div class="av-card-value${val ? '' : ' pending'}">${val || 'aguardando...'}</div>
+    </div>`;
+  }).join('');
+}
+
 async function handleAvaliacao(text){
   const q = AVALIACAO_QS[state.avaliacaoStep];
   state.avaliacao[q.key] = text;
   state.avaliacaoStep++;
+  renderAvaliacaoCards();
   showTyping(); await delay(1000); removeTyping();
 
   if(state.avaliacaoStep < AVALIACAO_QS.length){
@@ -708,6 +758,7 @@ async function gerarAvaliacaoPDF(){
   // Sections
   section('01  METAS E RESULTADOS');
   block('Metas do período', av.metas, GOLD);
+  block('Resultado', av.metas_alcance||'—', GOLD);
 
   section('02  ENTREGAS E PROJETOS');
   block('Projetos entregues', av.projetos, BLUE);
@@ -2481,7 +2532,7 @@ async function send(text){
 
   // confirm_reset must be checked FIRST — before global reset detection
   if(state.phase === 'confirm_reset'){
-    if(/^(sim|apagar|recomeçar|sim, apagar)/i.test(text.trim())){
+    if(/^sim, apagar/i.test(text.trim())){
       resetApp();
     } else {
       showTyping(); await delay(700); removeTyping();
@@ -2492,7 +2543,7 @@ async function send(text){
   }
 
   // Global reset detection
-  if(/^(reset tudo|reiniciar tudo|recomeçar tudo|apagar tudo|apague tudo|zerar tudo|zere tudo|deletar tudo|limpar tudo|começar do zero|tudo de novo)/i.test(text.trim())){
+  if(/^(reset tudo|reiniciar tudo|recomeçar tudo|apagar tudo|apague tudo|zerar tudo|zere tudo|deletar tudo|limpar tudo|começar do zero|quero começar do zero|tudo de novo)/i.test(text.trim()) && !/resolvi|já|tinha|antes|quando|porque|pra|para|depois/i.test(text.trim())){
     showTyping(); await delay(900); removeTyping();
     addMsg('agent','Claro! Posso apagar tudo e recomeçar do zero. Tem certeza?','');
     setQR(['Sim, apagar tudo e recomeçar','Não, pode continuar']);
@@ -2699,7 +2750,11 @@ window.addEventListener('load', function(){
         askSwotQuadrant(q);
       } else if(state.phase==='done'){
         addMsg('agent','Seu mapa já está completo! Seu Mapa de Narrativas está disponível abaixo. 🌿','Concluído');
-        clearQR();
+        setTimeout(()=>{
+          addMsg('agent','Você tem uma **avaliação de desempenho** chegando? Posso te ajudar a montar a sua autorreflexão. 🌿','');
+          setQR(['Sim, quero me preparar para a avaliação','Não por agora, obrigada']);
+          state.phase='pos_mapa';
+        },1200);
       }
     }, 400);
   } else {
