@@ -611,6 +611,14 @@ function markDone(id,nextId){
 // MODE SELECT
 // ============================================================
 async function handleModeSelect(text){
+  // Reset trigger
+  if(/reinici|recomeç|do zero|apagar|zerar|limpar|começar de novo/i.test(text)){
+    state.phase='confirm_reset';
+    showTyping(); await delay(700); removeTyping();
+    addMsg('agent','Tem certeza que quer apagar tudo e começar do zero? 🌿','');
+    setQR(['Sim, apagar tudo','Não, cancelar']);
+    return;
+  }
   showTyping(); await delay(900); removeTyping();
   if(/avalia[cç]|desempenho|performance|conversa com|antes da/i.test(text)){
     state.mode = 'avaliacao';
