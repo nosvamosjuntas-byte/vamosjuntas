@@ -718,7 +718,7 @@ const CONTEXTO_QS = [
   {
     key:'area',
     q:'Em qual área você atua ou atuou mais?',
-    qr:['Administrativa / Financeira','Comercial / Vendas','Operacional / Logística','RH / Pessoas','Atendimento / Customer Success','Outra área'],
+    qr:['Administrativa / Financeira','Comercial / Vendas','Marketing / Comunicação','Tecnologia / TI','RH / Pessoas','Jurídico / Compliance','Operacional / Logística','Saúde / Educação','Outra área'],
   },
   {
     key:'situacao',
@@ -1090,7 +1090,7 @@ async function handleTimeline(text){
   // isOpening = true only on the very first message (tlStep===0, not yet done opening)
   const isOpening = state.tlStep === 0 && !state.tlOpeningDone && !state.tlAwaitingContinue;
 
-  const isNavGeneric = /^(vou começar|vou continuar|prefiro começar|pode seguir|não, pode|sim, quero|mais uma|pode continuar|sim, tenho|não, pode)/i.test(text.trim());
+  const isNavGeneric = /^(vou começar|vou continuar|prefiro começar|prefiro não contar|pode seguir|não, pode|sim, quero|mais uma|pode continuar|sim, tenho|não, pode)/i.test(text.trim());
   if(!isNavGeneric) addTLItem(text, guessType(text));
   showTyping(); await delay(1400); removeTyping();
 
@@ -2121,7 +2121,7 @@ function resetApp(){
   Object.assign(state, {
     phase:'cadastro_nome', name:'', fullName:'', birthday:'', email:'',
     objective:null, contexto:{experiencia:'',area:'',situacao:''},
-    contextoStep:0, timelineItems:[], tlStep:0, tlOpeningDone:false,
+    contextoStep:0, contextoAwaitingOther:false, timelineItems:[], tlStep:0, tlOpeningDone:false,
     tlAwaitingContinue:false, tlJustFollowedUp:false, tlFinalCheck:false,
     tlYearIdx:0, tlPeriodo:'15', swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
     swotStep:0, swotSubStep:0, sintese:'', plano:{acoes:[],priorizadas:[]},
