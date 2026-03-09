@@ -2290,7 +2290,7 @@ async function send(text){
   }
 
   // Global reset detection
-  if(/reset|reiniciar|recomeçar|apagar|apague|deletar|limpar|começar do zero|do zero|tudo de novo/i.test(text.trim())){
+  if(/reset|reinici|recome[cç]|apagar|apague|zerar|zere|deletar|limpar|come[cç]ar do zero|do zero|tudo de novo|tudo por favor/i.test(text.trim())){
     showTyping(); await delay(900); removeTyping();
     addMsg('agent','Claro! Posso apagar tudo e recomeçar do zero. Tem certeza?','');
     setQR(['Sim, apagar tudo e recomeçar','Não, pode continuar']);
@@ -2298,6 +2298,13 @@ async function send(text){
     state.phase = 'confirm_reset';
     return;
   }
+  // Handle unknown short inputs gracefully
+  if(text.trim().length <= 2 || /^[?!.]+$/.test(text.trim())){
+    showTyping(); await delay(700); removeTyping();
+    addMsg('agent','Pode escrever com suas palavras — estou ouvindo. 🌿','');
+    return;
+  }
+
   if(['cadastro_nome','cadastro_aniversario','cadastro_email'].includes(state.phase)) await handleCadastro(text);
   else if(state.phase==='objetivo') await handleObjetivo(text);
   else if(state.phase==='descoberta') await handleDescoberta(text);
