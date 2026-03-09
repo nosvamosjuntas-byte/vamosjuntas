@@ -1593,7 +1593,7 @@ async function handleTlRetry(text){
     setQR(['Vou começar pelo meu primeiro emprego','Vou contar sobre uma mudança importante','Vou falar sobre algo que me orgulho','Só um momento marcante']);
   } else {
     state.phase='done';
-    addMsg('agent','Tudo bem, respeitamos isso. 🌿\n\nSempre que quiser, a Impulsa estará aqui para te ouvir.\n\nAgora vamos para a pesquisa rápida antes do seu PDF! 💛','Quase lá!');
+    addMsg('agent','Tudo bem, respeitamos isso. 🌿\n\nSempre que quiser, a Impulsa estará aqui para te ouvir.\n\nA pesquisa rápida está no **painel ao lado** — são só 5 perguntas. 💛','Quase lá!');
     document.getElementById('ws-survey').classList.add('active');
     document.getElementById('ws-swot').classList.add('done');
     markDone('step2','step3');
@@ -2060,7 +2060,9 @@ function askPrazo(prazo){
 
 async function finishPlano(){
   const nm=state.name?', '+state.name:'';
-  addMsg('agent','Seu plano está pronto'+nm+'! \u2736\n\nPriorizamos **3 ações** com prazos claros e montamos o 5W2H de cada uma — você pode ver os cards ao lado.\n\nVocê vai notar que alguns campos têm o ícone 🔍 — esses são campos que precisam de uma pesquisa da sua parte antes de preencher. Por exemplo: quem exatamente envolver, onde vai acontecer, como vai executar na prática.\n\nNão é problema! A Impulsa fica salva aqui. Pesquise, reflita e volte quando quiser completar. 🌿\n\nAntes de fechar, bora responder uma pesquisa rápida? 💛','Plano de Ação');
+  addMsg('agent','Seu plano está pronto'+nm+'! \u2736\n\nPriorizamos **3 ações** com prazos claros e montamos o 5W2H de cada uma — você pode ver os cards ao lado.\n\nVocê vai notar que alguns campos têm o ícone 🔍 — esses são campos que precisam de uma pesquisa da sua parte antes de preencher. Por exemplo: quem exatamente envolver, onde vai acontecer, como vai executar na prática.\n\nNão é problema! A Impulsa fica salva aqui. Pesquise, reflita e volte quando quiser completar. 🌿\n\nAntes de fechar. 🌿','Plano de Ação');
+  await delay(1200);
+  addMsg('agent','Uma última etapa antes do seu PDF: a **pesquisa rápida** está no painel ao lado — são só 5 perguntas. 💛 Sua opinião ajuda muito a melhorar a Impulsa para outras mulheres.','Pesquisa');
   document.getElementById('ws-plano').classList.add('done');
   document.getElementById('ws-survey').classList.add('active');
   markDone('step3','step4');
@@ -2156,8 +2158,8 @@ function submitSurvey(){
     const msg='Obrigada'+nm+'! 💛\n\nAgora sim — seu **Mapa de Narrativas** está pronto! Ele reúne sua trajetória, SWOT, narrativa profissional, posicionamento e plano de ação para **'+objLabel+'**.\n\nGuarde, revise quando quiser e use como base nas suas próximas conversas de carreira. Você merece esse próximo passo. 🌿';
     addMsg('agent',msg,'Seu Mapa de Narrativas');
     setTimeout(()=>{
-      addMsg('agent','Uma última coisa — você tem uma **avaliação de desempenho** chegando? Posso te ajudar a montar a sua autorreflexão com base em tudo que você compartilhou aqui. 🌿','');
-      setQR(['Sim, quero me preparar para a avaliação','Não por agora, obrigada']);
+      addMsg('agent','Mais uma coisa — posso te ajudar a preparar a sua **conversa de avaliação de desempenho**. É um documento que você usa antes ou durante a sua próxima conversa com a sua liderança ou mentoria. Quer montar agora? 🌿','');
+      setQR(['Sim, quero montar agora','Agora não, obrigada']);
       state.phase='pos_mapa';
     },2000);
   }, 600);
@@ -2549,6 +2551,19 @@ function resetApp(){
 
 async function send(text){
   if(!text.trim())return;
+
+  // ── UNIVERSAL REINICIE — intercepts at any phase/timing ──
+  if(/^reinici(e|a|ar)?$/i.test(text.trim())){
+    clearQR();addMsg('user',text);
+    document.getElementById('userInput').value='';
+    document.getElementById('userInput').style.height='40px';
+    state.phase='confirm_reset';
+    showTyping(); await delay(700); removeTyping();
+    addMsg('agent','Tem certeza que quer apagar tudo e começar do zero? 🌿','');
+    setQR(['Sim, apagar tudo','Não, cancelar']);
+    return;
+  }
+
   clearQR();addMsg('user',text);
   document.getElementById('userInput').value='';
   document.getElementById('userInput').style.height='40px';
@@ -2600,7 +2615,7 @@ async function send(text){
   else if(state.phase==='objetivo') await handleObjetivo(text);
   else if(state.phase==='avaliacao') await handleAvaliacao(text);
   else if(state.phase==='pos_mapa'){
-    if(/sim|avalia|desempenho/i.test(text)){
+    if(/sim|avalia|desempenho|montar agora/i.test(text)){
       state.phase='avaliacao';
       state.avaliacaoStep=0;
       state.avaliacao={};
@@ -2794,8 +2809,8 @@ window.addEventListener('load', function(){
       } else if(state.phase==='done'||state.phase==='pos_mapa'||state.phase==='avaliacao_done'){
         addMsg('agent','Seu mapa já está completo! Seu Mapa de Narrativas está disponível abaixo. 🌿','Concluído');
         setTimeout(()=>{
-          addMsg('agent','Você tem uma **avaliação de desempenho** chegando? Posso te ajudar a montar a sua autorreflexão. 🌿','');
-          setQR(['Sim, quero me preparar para a avaliação','Não por agora, obrigada']);
+          addMsg('agent','Posso te ajudar a preparar a sua **conversa de avaliação de desempenho** — um documento que você usa antes ou durante a sua próxima conversa com a sua liderança ou mentoria. Quer montar agora? 🌿','');
+          setQR(['Sim, quero montar agora','Agora não, obrigada']);
           state.phase='pos_mapa';
         },1200);
       }
