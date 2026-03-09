@@ -673,6 +673,15 @@ const AVALIACAO_LABELS = {
   reconhecimento: 'Em que quero ser reconhecida',
 };
 
+function formatAvVal(key, val){
+  // For metas: format as list if multiline or contains numbers
+  if(key === 'metas'){
+    const lines = val.split(/\n|;/).map(l=>l.trim()).filter(Boolean);
+    if(lines.length > 1) return lines.map(l=>'· '+l).join('<br>');
+  }
+  return val;
+}
+
 function renderAvaliacaoCards(){
   const container = document.getElementById('avaliacaoItems');
   if(!container) return;
@@ -682,15 +691,17 @@ function renderAvaliacaoCards(){
     const label = AVALIACAO_LABELS[k];
     return `<div class="av-card">
       <div class="av-card-label">${label}</div>
-      <div class="av-card-value${val ? '' : ' pending'}">${val || 'aguardando...'}</div>
+      <div class="av-card-value${val ? '' : ' pending'}">${val ? formatAvVal(k, val) : 'aguardando...'}</div>
     </div>`;
   }).join('');
 }
 
 async function handleAvaliacao(text){
   const q = AVALIACAO_QS[state.avaliacaoStep];
+  if(!q){ console.error('handleAvaliacao: no question at step', state.avaliacaoStep); return; }
   state.avaliacao[q.key] = text;
   state.avaliacaoStep++;
+  console.log('Avaliacao step', state.avaliacaoStep, '/', AVALIACAO_QS.length, '— key:', q.key);
   renderAvaliacaoCards();
   showTyping(); await delay(1000); removeTyping();
 
@@ -699,7 +710,7 @@ async function handleAvaliacao(text){
     addMsg('agent', 'Anotado. ✦\n\n' + next.q, 'Avaliação de Desempenho');
     if(next.qr.length) setQR(next.qr); else clearQR();
   } else {
-    // All collected — generate document
+    console.log('Avaliacao completa — gerando PDF...');
     await gerarAvaliacaoPDF();
   }
 }
