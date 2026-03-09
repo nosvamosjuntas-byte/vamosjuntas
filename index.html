@@ -2737,9 +2737,10 @@ window.addEventListener('load', function(){
       } else if(state.phase==='cadastro_email'){
         addMsg('agent','Qual é o seu **e-mail**?\n\n<span class="optional-tag">opcional — pode pular se preferir</span>','Cadastro');
         setQR(['Prefiro não informar'],'Pular');
-      } else if(state.phase==='objetivo'){
-        addMsg('agent','Qual é o seu **objetivo de carreira** nesse momento?','Seu Objetivo');
-        setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira','🤍 Não sei ainda — preciso de ajuda']);
+      } else if(state.phase==='objetivo'||state.phase==='mode_select'){
+        addMsg('agent','O que você quer fazer hoje' + (nm ? ', '+nm : '') + '? 🌿','');
+        setQR(['🗺️ Montar meu Mapa de Carreira completo','📋 Me preparar para minha avaliação de desempenho']);
+        state.phase='mode_select';
       } else if(state.phase==='contexto'){
         askContexto();
       } else if(state.phase==='timeline'){
