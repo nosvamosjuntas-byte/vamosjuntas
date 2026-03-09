@@ -1090,7 +1090,7 @@ async function handleTimeline(text){
   // isOpening = true only on the very first message (tlStep===0, not yet done opening)
   const isOpening = state.tlStep === 0 && !state.tlOpeningDone && !state.tlAwaitingContinue;
 
-  const isNavGeneric = /^(vou começar|vou continuar|prefiro começar|prefiro não contar|pode seguir|não, pode|sim, quero|mais uma|pode continuar|sim, tenho|não, pode)/i.test(text.trim());
+  const isNavGeneric = /^(vou começar|vou continuar|prefiro começar|prefiro não contar|pode seguir|pode seguir em frente|não, pode|sim, quero|mais uma|pode continuar|sim, tenho|não, pode|não, pode seguir)/i.test(text.trim());
   if(!isNavGeneric) addTLItem(text, guessType(text));
   showTyping(); await delay(1400); removeTyping();
 
@@ -1137,7 +1137,8 @@ async function handleTimeline(text){
       showTyping(); await delay(900); removeTyping();
       addMsg('agent', 'Tudo bem! Vamos em frente. 🌿', 'Linha do Tempo — História de Vida');
       await delay(600);
-      // Jump straight to guided questions
+      state.tlJustFollowedUp = true; // prevent short-answer follow-up
+      // Jump straight to guided questions — fall through
     } else {
       // She wants to share more — let her write freely, then come back here
       const isGenericCont = /^(sim, quero|sim, mais|pode seguir|não)/i.test(text.trim());
