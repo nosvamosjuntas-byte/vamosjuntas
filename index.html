@@ -481,7 +481,7 @@ const state = {
   phase:'cadastro_nome', // cadastro_nome | cadastro_aniversario | cadastro_email | objetivo | timeline | swot | done
   name:'', birthday:'', email:'',
   objective:null,
-  tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, swotStep:0, swotSubStep:0,
+  tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, swotStep:0, swotSubStep:0,
   timelineItems:[],
   swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
   summaryText:'',
@@ -1130,6 +1130,17 @@ async function handleTimeline(text){
   }
 
   // She chose to continue or skip after transition
+  // She said "sim" and now is writing the actual content
+  if(state.tlAwaitingFreeText){
+    state.tlAwaitingFreeText = false;
+    addTLItem(text, guessType(text));
+    showTyping(); await delay(900); removeTyping();
+    addMsg('agent', 'Anotado. ✦ Tem mais alguma coisa que queira trazer?', 'Linha do Tempo — História de Vida');
+    setQR(['Sim, mais uma coisa', 'Não, pode seguir']);
+    state.tlAwaitingContinue = true;
+    return;
+  }
+
   if(state.tlAwaitingContinue){
     state.tlAwaitingContinue = false;
     const skip = /^(pode seguir|não|nao|pular|seguir)/i.test(text.trim());
@@ -1140,11 +1151,19 @@ async function handleTimeline(text){
       state.tlJustFollowedUp = true; // prevent short-answer follow-up
       // Jump straight to guided questions — fall through
     } else {
-      // She wants to share more — let her write freely, then come back here
       const isGenericCont = /^(sim, quero|sim, mais|pode seguir|não)/i.test(text.trim());
-      if(!isGenericCont) addTLItem(text, guessType(text));
+      if(isGenericCont){
+        // She just said "sim" — invite her to write, don't "anotado" yet
+        showTyping(); await delay(700); removeTyping();
+        addMsg('agent', 'Pode contar — estou ouvindo. Inclua o ano se possível. 🌿', 'Linha do Tempo — História de Vida');
+        clearQR();
+        state.tlAwaitingFreeText = true;
+        return;
+      }
+      // She wrote something real — save it and ask if there's more
+      addTLItem(text, guessType(text));
       showTyping(); await delay(900); removeTyping();
-      addMsg('agent', 'Anotado. ✦ Tem mais alguma coisa que queira trazer? Se sim, me conte e inclua o ano.', 'Linha do Tempo — História de Vida');
+      addMsg('agent', 'Anotado. ✦ Tem mais alguma coisa que queira trazer?', 'Linha do Tempo — História de Vida');
       setQR(['Sim, mais uma coisa', 'Não, pode seguir']);
       state.tlAwaitingContinue = true;
       return;
@@ -2239,7 +2258,7 @@ function resetApp(){
     phase:'cadastro_nome', name:'', fullName:'', birthday:'', email:'',
     objective:null, contexto:{experiencia:'',area:'',situacao:''},
     contextoStep:0, contextoAwaitingOther:false, timelineItems:[], tlStep:0, tlOpeningDone:false,
-    tlAwaitingContinue:false, tlJustFollowedUp:false, tlFinalCheck:false,
+    tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false,
     tlYearIdx:0, tlPeriodo:'15', swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
     swotStep:0, swotSubStep:0, sintese:'', plano:{acoes:[],priorizadas:[]},
     pesquisa:{}, narrativa:null, posicionamento:null,
