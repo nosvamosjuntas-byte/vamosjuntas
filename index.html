@@ -63,6 +63,8 @@
   .qr{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:6px 13px;font-size:0.75rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
   .qr:hover{border-color:var(--accent2);color:var(--accent);background:var(--accent-soft);}
   .qr.skip{border-style:dashed;color:var(--text-dim);}
+  .restart-btn{background:none;border:1px solid var(--border);border-radius:12px;padding:4px 10px;font-size:0.72rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:8px;transition:all 0.2s;}
+  .restart-btn:hover{border-color:var(--accent);color:var(--accent);}
   .qr.multi{border:1.5px solid var(--border);background:var(--surface2);}
   .qr.multi.selected{background:var(--accent);color:white;border-color:var(--accent);}
   .qr-confirm{margin-top:8px;width:100%;background:var(--accent);color:white;border:none;border-radius:20px;padding:10px 20px;font-size:0.84rem;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;display:none;}
@@ -906,6 +908,17 @@ async function handleDescoberta(text){
 // ============================================================
 async function handleContexto(text){
   const q = CONTEXTO_QS[state.contextoStep];
+
+  // If she chose "Outra área", ask her to specify
+  if(/^outra.?área$/i.test(text.trim()) && !state.contextoAwaitingOther){
+    state.contextoAwaitingOther = true;
+    showTyping(); await delay(700); removeTyping();
+    addMsg('agent','Qual área é essa? Pode escrever com suas palavras.', 'Entender Melhor Seu Objetivo');
+    clearQR();
+    return;
+  }
+  state.contextoAwaitingOther = false;
+
   state.contexto[q.key] = text;
   updateContextoCard();
   state.contextoStep++;
@@ -938,11 +951,16 @@ async function handleContexto(text){
 
 // Perguntas de aprofundamento — a agente puxa fios da história
 const TL_APROFUNDAMENTOS = [
-  { trigger: 'always',   q: (n)=>`Que história. Obrigada por compartilhar isso. 🌿\n\nMe conta sobre o seu **primeiro trabalho** — como foi? O que você aprendeu ali, mesmo que tenha sido difícil?`, qr:['Foi meu primeiro emprego formal','Era um trabalho informal ou temporário','Fiz estágio ou trainee','Comecei empreendendo'] },
-  { trigger: 'always',   q: (n)=>`E ao longo desse caminho — você **mudou de empresa**, de área ou de cidade em algum momento? Como foi essa transição?`, qr:['Sim, mudei de empresa','Sim, mudei de área','Mudei de cidade ou país','Fiquei na mesma empresa mas cresci muito','Não, fiz toda minha trajetória num lugar só'] },
-  { trigger: 'always',   q: (n)=>`Pensando em tudo isso... qual é a **entrega ou conquista** da qual você mais se orgulha? Pode ser algo que ninguém viu, mas que você sabe o valor.`, qr:['Um projeto que criei ou transformei','Um resultado que gerou impacto real','Algo que aprendi do zero','Liderei ou desenvolvi pessoas','Uma situação difícil que resolvi'] },
-  { trigger: 'always',   q: (n)=>`E os estudos — você fez **faculdade, cursos ou formações**? Isso impactou sua trajetória de alguma forma?`, qr:['Fiz faculdade e impactou muito','Fiz faculdade mas não usei diretamente','Aprendi mais na prática do que estudando','Estou estudando agora','Não fiz faculdade e tudo bem com isso'] },
-  { trigger: 'always',   q: (n)=>`Por último: houve algum **momento de virada** — uma fase que mudou quem você é ou como você trabalha? Pode ser pessoal ou profissional.`, qr:['Uma demissão que me ensinou muito','A maternidade mudou tudo','Um esgotamento que me fez repensar','Uma conquista que me deu confiança','Uma pessoa que me abriu portas'] },
+  { skip: /primeiro (emprego|trabalho|estágio|trainee)|comecei (a trabalhar|empreend)|muito nova|trabalhar nova/i,
+    q: (n)=>`Me conta sobre o seu **primeiro trabalho** — como foi? O que você aprendeu ali, mesmo que tenha sido difícil?`, qr:['Foi meu primeiro emprego formal','Era um trabalho informal ou temporário','Fiz estágio ou trainee','Comecei empreendendo'] },
+  { skip: /mud(ei|ou) de (empresa|área|cidade|país|estado)|morei|vivi|me mudei|emigrei|intercâmbio/i,
+    q: (n)=>`Ao longo desse caminho — você **mudou de empresa**, de área ou de cidade em algum momento? Como foi essa transição?`, qr:['Sim, mudei de empresa','Sim, mudei de área','Mudei de cidade ou país','Fiquei na mesma empresa mas cresci muito','Não, fiz toda minha trajetória num lugar só'] },
+  { skip: /conquist|orgulh|prêmio|resultado|impacto|criei|transformei|projeto|entrega/i,
+    q: (n)=>`Qual é a **entrega ou conquista** da qual você mais se orgulha? Pode ser algo que ninguém viu, mas que você sabe o valor.`, qr:['Um projeto que criei ou transformei','Um resultado que gerou impacto real','Algo que aprendi do zero','Liderei ou desenvolvi pessoas','Uma situação difícil que resolvi'] },
+  { skip: /faculdade|universidade|graduação|formei|MBA|pós|curso|especialização|estudan/i,
+    q: (n)=>`E os estudos — você fez **faculdade, cursos ou formações**? Isso impactou sua trajetória de alguma forma?`, qr:['Fiz faculdade e impactou muito','Fiz faculdade mas não usei diretamente','Aprendi mais na prática do que estudando','Estou estudando agora','Não fiz faculdade e tudo bem com isso'] },
+  { skip: /virada|demiss|esgot|maternidade|tudo mudou|mudou tudo|repensar|recomeç/i,
+    q: (n)=>`Houve algum **momento de virada** — uma fase que mudou quem você é ou como você trabalha? Pode ser pessoal ou profissional.`, qr:['Uma demissão que me ensinou muito','A maternidade mudou tudo','Um esgotamento que me fez repensar','Uma conquista que me deu confiança','Uma pessoa que me abriu portas'] },
 ];
 
 function calcIdade(){
@@ -958,23 +976,49 @@ function calcIdade(){
 }
 
 function guessType(t){
-  if(/demitid|emprego|trabalh|cargo|promoç|carreira|empresa|projeto|entrega|função|lider/i.test(t))return'profissional';
-  if(/orgulh|conquistei|terminei|consegui|fiz|criei|aprendi|resultado/i.test(t))return'conquista';
-  if(/difícil|desafio|superei|enfrentei|perda|crise|medo|maternidade|esgot|virada/i.test(t))return'desafio';
+  if(/demitid|emprego|trabalh|cargo|promoç|carreira|empresa|projeto|entrega|função|lider|departamento|setor|esg|equipe|time|negócio|startup|mercado|consultoria|agência|diretor|gerente|coordenador|montei|estruturei|implementei|mba|faculdade|curso|formação|pós-grad/i.test(t))return'profissional';
+  if(/orgulh|conquistei|terminei|consegui|fiz|criei|aprendi|resultado|prêmio|reconhec|award/i.test(t))return'conquista';
+  if(/difícil|desafio|superei|enfrentei|perda|crise|medo|maternidade|esgot|virada|demiss/i.test(t))return'desafio';
   return'pessoal';
 }
 function typeLabel(t){return{profissional:'Profissional',pessoal:'Pessoal',desafio:'Desafio superado',conquista:'Conquista'}[t]||t;}
 
-function addTLItem(text,type){
-  const year = extractYear(text) || null;
-  // Clean year from text if found
-  const cleanText = text.replace(/\b(19[5-9]\d|20[0-2]\d)\b/,'').replace(/\s{2,}/g,' ').trim();
-  state.timelineItems.push({text: year ? cleanText : text, type, year});
+function extractAllYears(text){
+  const cur = new Date().getFullYear();
+  const re = /\b(19[5-9]\d|20[0-2]\d)\b/g;
+  const years = [];
+  let m;
+  while((m = re.exec(text)) !== null){
+    const y = parseInt(m[1]);
+    if(y <= cur + 1) years.push(y); // allow up to next year for future plans
+  }
+  return [...new Set(years)].sort((a,b)=>a-b);
+}
+
+function addTLItem(text, type){
+  const norm = text.trim().toLowerCase();
+  if(state.timelineItems.some(i => i.text.trim().toLowerCase() === norm)) return;
+
+  const years = extractAllYears(text);
+  const year = years[0] || null;
+  const year2 = years[1] || null;
+  const yearDisplay = year ? (year2 && year2 !== year ? year + ' – ' + year2 : String(year)) : null;
+
+  // Keep original text as-is — no cleaning
+  state.timelineItems.push({text: text.trim(), type, year, yearDisplay});
   renderTL();
 }
 
 function renderTL(){
-  document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year||'—'}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
+  const sorted = [...state.timelineItems].sort((a,b)=>{
+    if(a.year && b.year) return a.year - b.year;
+    if(a.year) return -1;
+    if(b.year) return 1;
+    return 0;
+  });
+  document.getElementById('timelineItems').innerHTML = sorted.map(i =>
+    `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.yearDisplay || i.year || '—'}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`
+  ).join('');
 }
 
 function showInsights(){
@@ -1026,7 +1070,7 @@ async function handleTimeline(text){
   };
 
   const tlReactionMsgs = {
-    mudanca:    ['Que momento importante. Mudanças assim costumam exigir muita coragem — e moldam muito quem a gente se torna. 🌿','Recomeços são sempre mais pesados do que parecem para quem está de fora. Obrigada por compartilhar isso.'],
+    mudanca:    ['Que momento importante. Mudanças assim costumam exigir muita coragem — e moldam muito quem a gente se torna. 🌿','Recomeços são sempre mais pesados do que parecem para quem está de fora. Isso diz muito sobre você.'],
     conquista:  ['Isso é muito bonito. Sinto que você ainda não reconhece o tamanho dessa conquista. 🌿','Que realização. E o interessante é que isso revela muito sobre quem você é — não só o que você fez.'],
     desafio:    ['Obrigada por confiar isso aqui. Fases assim deixam marcas — e também deixam força. 🌿','Você passou por isso. Isso por si só já diz muito sobre você.'],
     maternidade:['A maternidade tem um peso que pouquíssimas pessoas conseguem ver de fora. Obrigada por trazer isso. 🌿','Esse capítulo muda tudo — e muita gente subestima o quanto.'],
@@ -1050,16 +1094,25 @@ async function handleTimeline(text){
   if(!isNavGeneric) addTLItem(text, guessType(text));
   showTyping(); await delay(1400); removeTyping();
 
+  // If it's just a nav button, invite her to write without reacting as if she told a story
+  if(isNavGeneric && isOpening){
+    addMsg('agent', 'Pode começar — estou ouvindo. 🌿', 'Linha do Tempo — História de Vida');
+    clearQR();
+    return;
+  }
+
   if(isOpening){
     const wordCount = text.trim().split(/\s+/).length;
     if(wordCount >= 40){
       // Long enough — skip follow-up, go straight to "share more?" question
       state.tlOpeningDone = true; // mark so next block fires
     } else {
-      // Short — react and ask her to tell more + the year
+      // Short — react. Only ask for year if not already mentioned
       state.tlOpeningDone = true;
-      state.tlStep = 1; // advance so isOpening won't fire again
-      addMsg('agent', reactionMsg + '\n\nMe conta como foi — e me diz em que ano aconteceu?', 'Linha do Tempo — História de Vida');
+      state.tlStep = 1;
+      const hasYear = extractAllYears(text).length > 0;
+      const followUp = hasYear ? 'Me conta um pouco mais sobre isso.' : 'Me conta como foi — e me diz em que ano aconteceu?';
+      addMsg('agent', reactionMsg + '\n\n' + followUp, 'Linha do Tempo — História de Vida');
       clearQR();
       return;
     }
@@ -1068,9 +1121,9 @@ async function handleTimeline(text){
   // After the one follow-up — transition gently to guided questions
   if(state.tlOpeningDone){
     state.tlOpeningDone = false;
-    addTLItem(text, guessType(text));
+    // item already added at line above — don't add again
     showTyping(); await delay(1200); removeTyping();
-    addMsg('agent', 'Obrigada por compartilhar isso. 🌿\n\nVocê quer contar outros fatos da sua vida até hoje? Algo marcante que você não quer esquecer — que impacta positivamente ou traz alguma lição de aprendizado?\n\nPode ser profissional, pessoal ou os dois. Aqui não tem certo ou errado.', 'Linha do Tempo — História de Vida');
+    addMsg('agent', 'Você quer contar outros fatos da sua vida até hoje? Algo marcante que não quer esquecer — que impacta positivamente ou traz alguma lição de aprendizado?\n\nPode ser profissional, pessoal ou os dois.', 'Linha do Tempo — História de Vida');
     setQR(['Sim, quero contar mais', 'Pode seguir em frente']);
     state.tlAwaitingContinue = true;
     return;
@@ -1103,13 +1156,17 @@ async function handleTimeline(text){
 
   if(isShortAnswer){
     state.tlJustFollowedUp = true;
-    const deepens = [
+    const hasYearAlready = extractAllYears(text).length > 0;
+    const deepensWithYear = [
       'Me conta um pouco mais — e em que ano foi isso?',
-      'Que interessante! Me conta mais e me diz o ano.',
-      'Isso é importante. Me fala um pouco mais — e quando foi?',
       'Quero entender melhor — o que aconteceu e em que ano?',
     ];
-    const d = deepens[state.tlStep % deepens.length];
+    const deepensNoYear = [
+      'Me conta um pouco mais sobre isso.',
+      'Isso é importante. Me fala um pouco mais.',
+    ];
+    const pool = hasYearAlready ? deepensNoYear : deepensWithYear;
+    const d = pool[state.tlStep % pool.length];
     showTyping(); await delay(900); removeTyping();
     addMsg('agent', d, 'Linha do Tempo — História de Vida');
     clearQR();
@@ -1134,6 +1191,17 @@ async function handleTimeline(text){
   } else {
     const neutral = ['Faz todo sentido. ✦','Anotado. ✦','Isso ficou registrado. ✦','Que fase importante.'];
     trans = neutral[state.tlStep % neutral.length];
+  }
+
+  // Find next question not already covered by what she shared
+  while(state.tlStep < TL_APROFUNDAMENTOS.length){
+    const aprofund = TL_APROFUNDAMENTOS[state.tlStep];
+    const allShared = state.timelineItems.map(i=>i.text).join(' ');
+    if(aprofund.skip && aprofund.skip.test(allShared)){
+      state.tlStep++; // skip — already covered
+      continue;
+    }
+    break;
   }
 
   if(state.tlStep < TL_APROFUNDAMENTOS.length){
@@ -1169,10 +1237,15 @@ async function handleTlFinalCheck(text){
 }
 
 async function finishTimeline(){
-  // Filter out empty/generic items before asking years
+  // Filter out empty/generic items
   state.timelineItems = state.timelineItems.filter(i => i.text && i.text.trim().length > 3);
-  if(state.timelineItems.length === 0){
-    completeTL();
+  if(state.timelineItems.length === 0){ await completeTL(); return; }
+  // Check if all items already have years
+  const missing = state.timelineItems.filter(i => !i.year);
+  if(missing.length === 0){
+    state.timelineItems.sort((a,b)=>a.year-b.year);
+    renderTL();
+    await completeTL();
     return;
   }
   state.tlYearIdx = 0;
@@ -1181,8 +1254,8 @@ async function finishTimeline(){
 }
 
 function extractYear(text){
-  const m = text.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
-  return m ? parseInt(m[1]) : null;
+  const years = extractAllYears(text);
+  return years[0] || null;
 }
 
 function askTLYear(){
@@ -1239,7 +1312,7 @@ async function introSwot(){
   showTyping(); await delay(2200); removeTyping();
 
   addMsg('agent','A matriz tem 4 quadrantes:\n\n**S — Forças** → interno, positivo. O que você controla e vai bem.\n**W — Fraquezas** → interno, limitante. O que você controla mas precisa de atenção.\n**O — Oportunidades** → externo, favorável. O que o mercado oferece para o seu plano.\n**T — Ameaças** → externo, de risco. O que está fora do seu controle e pode ser obstáculo.\n\nPodemos começar?','SWOT Pessoal');
-  setQR(['Sim, vamos!','Pode continuar 🌿']);
+  setQR(['Sim, vamos!','Pode continuar 🌿','Não, prefiro finalizar por aqui']);
   state.phase='swot_confirm';
 }
 
@@ -1268,12 +1341,24 @@ async function handleTlRetry(text){
 // SWOT
 // ============================================================
 async function handleSwotConfirm(text){
-  // Any positive response starts the SWOT
   showTyping(); await delay(800); removeTyping();
+  if(/não|nao|finalizar|encerrar|pular/i.test(text)){
+    addMsg('agent','Tudo bem! Vou gerar seu Mapa de Narrativas com o que você já compartilhou. 🌿','');
+    await delay(800);
+    await skipToEnd();
+    return;
+  }
   state.phase='swot';
   const q=getSwotQs()[0];
   addMsg('agent', q.intro, q.phase);
   askSwotQuadrant(q);
+}
+
+async function skipToEnd(){
+  document.getElementById('ws-swot').classList.add('done');
+  markDone('step2','step3');
+  state.phase='done';
+  await gerarMapaNarrativas();
 }
 
 function renderSwot(){
@@ -2030,11 +2115,84 @@ function generatePDF(){
 // ============================================================
 // SEND
 // ============================================================
+function resetApp(){
+  localStorage.removeItem('impulsa_state');
+  // Reset state to initial
+  Object.assign(state, {
+    phase:'cadastro_nome', name:'', fullName:'', birthday:'', email:'',
+    objective:null, contexto:{experiencia:'',area:'',situacao:''},
+    contextoStep:0, timelineItems:[], tlStep:0, tlOpeningDone:false,
+    tlAwaitingContinue:false, tlJustFollowedUp:false, tlFinalCheck:false,
+    tlYearIdx:0, tlPeriodo:'15', swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
+    swotStep:0, swotSubStep:0, sintese:'', plano:{acoes:[],priorizadas:[]},
+    pesquisa:{}, narrativa:null, posicionamento:null,
+    descoberta:{visao:'',estado:'',obstaculo:''}, descobertaStep:0,
+    descobertaSugestao:null, descobertaAlt:null, phaseBeforeReset:null
+  });
+  // Clear UI
+  document.getElementById('messages').innerHTML='';
+  clearQR();
+  // Reset workspace cards
+  document.querySelectorAll('.ws-section').forEach(el=>{
+    el.classList.remove('active','done');
+  });
+  document.querySelectorAll('.step-item').forEach(el=>{
+    el.classList.remove('active','done');
+    const num = el.querySelector('.step-num');
+    if(num && num.textContent==='✓') num.textContent = el.dataset.num||'';
+  });
+  // Reset cadastro fields
+  ['cad-nome','cad-aniversario','cad-email'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.textContent='—';el.classList.add('pending');}
+  });
+  document.getElementById('ws-cadastro').classList.add('active');
+  document.getElementById('step0').classList.add('active');
+  // Restart
+  setTimeout(()=>startApp(), 300);
+}
+
 async function send(text){
   if(!text.trim())return;
   clearQR();addMsg('user',text);
   document.getElementById('userInput').value='';
   document.getElementById('userInput').style.height='40px';
+
+  // Reset only timeline
+  if(/reinici(ar|e|a)\s+(a\s+)?(minha\s+)?(linha|ldt|timeline)/i.test(text.trim())){
+    state.timelineItems = [];
+    state.tlStep = 0; state.tlOpeningDone = false; state.tlAwaitingContinue = false;
+    state.tlJustFollowedUp = false; state.tlFinalCheck = false; state.tlYearIdx = 0;
+    renderTL();
+    document.getElementById('insightsBox').style.display='none';
+    showTyping(); await delay(800); removeTyping();
+    addMsg('agent','Linha do tempo limpa! Vamos recomeçar. 🌿\n\nMe conta: o que aconteceu na sua vida nos últimos anos? Pode começar por onde quiser.','Linha do Tempo — História de Vida');
+    clearQR();
+    state.phase = 'timeline';
+    return;
+  }
+
+  // confirm_reset must be checked FIRST — before global reset detection
+  if(state.phase === 'confirm_reset'){
+    if(/^(sim|apagar|recomeçar|sim, apagar)/i.test(text.trim())){
+      resetApp();
+    } else {
+      showTyping(); await delay(700); removeTyping();
+      addMsg('agent','Tudo bem! Continuamos de onde paramos. 🌿','');
+      state.phase = state.phaseBeforeReset || 'objetivo';
+    }
+    return;
+  }
+
+  // Global reset detection
+  if(/reset|reiniciar|recomeçar|apagar|apague|deletar|limpar|começar do zero|do zero|tudo de novo/i.test(text.trim())){
+    showTyping(); await delay(900); removeTyping();
+    addMsg('agent','Claro! Posso apagar tudo e recomeçar do zero. Tem certeza?','');
+    setQR(['Sim, apagar tudo e recomeçar','Não, pode continuar']);
+    state.phaseBeforeReset = state.phase;
+    state.phase = 'confirm_reset';
+    return;
+  }
   if(['cadastro_nome','cadastro_aniversario','cadastro_email'].includes(state.phase)) await handleCadastro(text);
   else if(state.phase==='objetivo') await handleObjetivo(text);
   else if(state.phase==='descoberta') await handleDescoberta(text);
@@ -2122,8 +2280,11 @@ function rebuildUI(){
   }
   // Restore timeline
   if(state.timelineItems.length){
-    document.getElementById('timelineItems').innerHTML=state.timelineItems.map(i=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card"><div class="timeline-year">${i.year}</div><div class="timeline-content"><div class="timeline-event">${i.text}</div><span class="timeline-type type-${i.type}">${typeLabel(i.type)}</span></div></div></div>`).join('');
-    showInsights();
+    renderTL();
+    // Only show insights if timeline was fully completed
+    if(['swot','swot_confirm','narrativa','posicionamento','plano','done'].includes(state.phase)){
+      showInsights();
+    }
   }
   // Restore SWOT
   renderSwot();
@@ -2191,7 +2352,7 @@ window.addEventListener('load', function(){
         clearQR();
       } else if(state.phase==='swot_confirm'){
         addMsg('agent','Continuando para a SWOT Pessoal. Podemos começar?','SWOT Pessoal');
-        setQR(['Sim, vamos!','Pode continuar 🌿']);
+        setQR(['Sim, vamos!','Pode continuar 🌿','Não, prefiro finalizar por aqui']);
       } else if(state.phase==='swot'){
         const q=getSwotQs()[state.swotStep]||getSwotQs()[0];
         addMsg('agent','Continuando sua SWOT. '+q.intro, q.phase);
@@ -2202,11 +2363,13 @@ window.addEventListener('load', function(){
       }
     }, 400);
   } else {
-    setTimeout(function(){
-      addMsg('agent','Olá! Seja muito bem-vinda. 🌿\n\nEstou aqui para caminhar com você nessa jornada de carreira.\n\nPrimeiro, adoraria saber: qual é o seu **nome e sobrenome**?','Boas-vindas');
-    }, 400);
+    setTimeout(startApp, 400);
   }
 });
+
+function startApp(){
+  addMsg('agent','Olá! Seja muito bem-vinda. 🌿\n\nEstou aqui para caminhar com você nessa jornada de carreira.\n\nPrimeiro, adoraria saber: qual é o seu **nome e sobrenome**?','Boas-vindas');
+}
 </script>
 </body>
 </html>
