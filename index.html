@@ -796,6 +796,35 @@ async function gerarAvaliacaoPDF(){
     doc.text(`${p} / ${pages}`,W-M,292,{align:'right'});
   }
 
+  // Send avaliacao data to Make webhook
+  const avPayload = {
+    timestamp: new Date().toISOString(),
+    tipo: 'avaliacao_desempenho',
+    cadastro: {
+      nome: state.fullName || state.name || '—',
+      aniversario: state.birthday || '—',
+      email: state.email || '—',
+    },
+    avaliacao: {
+      periodo:         av.periodo        || '—',
+      metas:           av.metas          || '—',
+      metas_alcance:   av.metas_alcance  || '—',
+      projetos:        av.projetos       || '—',
+      alem_esperado:   av.alem           || '—',
+      dificuldades:    av.dificuldades   || '—',
+      pedido:          av.pedido         || '—',
+      sentimento:      av.sentimento     || '—',
+      sugestoes:       av.sugestoes      || '—',
+      melhorias:       av.melhorias      || '—',
+      reconhecimento:  av.reconhecimento || '—',
+    },
+  };
+  fetch(MAKE_WEBHOOK, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(avPayload),
+  }).catch(()=>{});
+
   doc.save(`impulsa-autorreflexao-desempenho-${(av.periodo||'').replace(/\s/g,'-').toLowerCase()||'ciclo'}.pdf`);
 
   addMsg('agent','Seu documento está pronto para baixar! 🌿\n\nUse-o para se preparar antes da conversa, enviar para sua liderança com antecedência, ou ter como referência durante a reunião.\n\nVocê se dedicou a essa reflexão — isso já é um diferencial. 💛\n\nQuer agora montar o seu **Mapa de Carreira completo** com linha do tempo, SWOT e narrativa profissional?','Concluído');
