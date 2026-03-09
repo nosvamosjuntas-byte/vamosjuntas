@@ -478,7 +478,8 @@ const OBJECTIVES = {
 // STATE
 // ============================================================
 const state = {
-  phase:'cadastro_nome', // cadastro_nome | cadastro_aniversario | cadastro_email | objetivo | timeline | swot | done
+  phase:'cadastro_nome', mode:'mapa', // mapa | avaliacao
+  // cadastro_nome | cadastro_aniversario | cadastro_email | mode_select | objetivo | avaliacao | timeline | swot | done
   name:'', birthday:'', email:'',
   objective:null,
   tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, swotStep:0, swotSubStep:0,
@@ -586,6 +587,161 @@ function markDone(id,nextId){
   el.classList.remove('active');el.classList.add('done');
   el.querySelector('.step-num').textContent='✓';
   if(nextId)document.getElementById(nextId).classList.add('active');
+}
+
+// ============================================================
+// MODE SELECT
+// ============================================================
+async function handleModeSelect(text){
+  showTyping(); await delay(900); removeTyping();
+  if(/avalia[cç]|desempenho|performance|conversa com|antes da/i.test(text)){
+    state.mode = 'avaliacao';
+    state.phase = 'avaliacao';
+    state.avaliacaoStep = 0;
+    state.avaliacao = {};
+    document.getElementById('ws-objetivo').classList.add('active');
+    addMsg('agent','Ótima escolha — essa conversa pode mudar o rumo da sua avaliação. 🌿\n\nVamos montar juntas a sua **autorreflexão de desempenho** — um documento que você pode usar antes ou durante a sua avaliação.\n\nVou te fazer algumas perguntas. Responda com o que vier — sem filtro.\n\nPrimeiro: **qual foi o período avaliado?** Por exemplo: Janeiro a Dezembro de 2024, ou 2º semestre de 2024.','Avaliação de Desempenho');
+    clearQR();
+  } else {
+    state.mode = 'mapa';
+    // Show bolsa speech then go to objectives
+    addMsg('agent','Imagine que desde o primeiro dia de trabalho você carrega uma bolsa. 👜\n\nDentro dela foram entrando, aos poucos, tudo que você viveu: as conquistas que ninguém viu, os projetos que você entregou no limite, os medos que você engoliu antes de uma reunião importante, as habilidades que você desenvolveu quase sem perceber, as histórias que moldaram quem você é hoje.\n\nCom o tempo, essa bolsa ficou cheia. Pesada, até. Mas bagunçada — porque ninguém te ensinou a organizá-la.\n\nA Impulsa existe para isso: abrir essa bolsa com você, organizar o que está dentro e te mostrar o quanto você tem a oferecer. 🌿','');
+    await delay(2400);
+    showTyping(); await delay(1800); removeTyping();
+    addMsg('agent','Agora me conta: **qual é o seu objetivo de carreira nesse momento?**\n\nEscolha o que faz mais sentido para essa fase. 🌱','Seu Objetivo');
+    setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira','🤍 Não sei ainda — preciso de ajuda']);
+    state.phase = 'objetivo';
+  }
+}
+
+// ============================================================
+// AVALIAÇÃO DE DESEMPENHO FLOW
+// ============================================================
+const AVALIACAO_QS = [
+  { key:'periodo',      q:'Qual foi o **período avaliado**? (ex: Janeiro a Dezembro de 2024)',          qr:[] },
+  { key:'metas',        q:'Quais eram as suas **principais metas** para esse período? E você as alcançou?', qr:['Alcancei todas','Alcancei a maioria','Alcancei parcialmente','Não alcancei as que esperava'] },
+  { key:'projetos',     q:'Quais foram os **projetos ou entregas mais importantes** que você fez?',    qr:[] },
+  { key:'alem',         q:'O que você fez que estava **além do esperado** — algo que foi além das suas responsabilidades formais?', qr:['Mentoria ou apoio a colegas','Processo novo que não era meu','Problema que resolvi sem ser acionada','Assumi responsabilidade em momento de crise'] },
+  { key:'dificuldades', q:'Que **dificuldades ou obstáculos** você enfrentou? E como você lidou com eles?', qr:[] },
+  { key:'pedido',       q:'O que você **quer pedir ou comunicar** nessa avaliação?', qr:['Promoção','Aumento de salário','Reconhecimento formal','Mais responsabilidades','Mudança de área ou projeto','Feedback sobre meu desenvolvimento'] },
+  { key:'sentimento',   q:'Como você está se **sentindo** nesse momento — em relação ao trabalho, à liderança, ao time?', qr:['Me sinto valorizada','Me sinto estagnada','Me sinto sobrecarregada','Tenho dúvidas sobre meu futuro aqui','Estou bem mas quero crescer'] },
+  { key:'sugestoes',    q:'O que você sugere **para si mesma** como desenvolvimento? E o que poderia sugerir **para a sua liderança** como apoio?', qr:[] },
+  { key:'melhorias',    q:'Quais são **3 ações de melhoria** que você quer se comprometer para o próximo ciclo?', qr:[] },
+  { key:'reconhecimento', q:'Em que você gostaria de ser **reconhecida** — o que você faz bem que sente que ainda não foi visto?', qr:[] },
+];
+
+async function handleAvaliacao(text){
+  const q = AVALIACAO_QS[state.avaliacaoStep];
+  state.avaliacao[q.key] = text;
+  state.avaliacaoStep++;
+  showTyping(); await delay(1000); removeTyping();
+
+  if(state.avaliacaoStep < AVALIACAO_QS.length){
+    const next = AVALIACAO_QS[state.avaliacaoStep];
+    addMsg('agent', 'Anotado. ✦\n\n' + next.q, 'Avaliação de Desempenho');
+    if(next.qr.length) setQR(next.qr); else clearQR();
+  } else {
+    // All collected — generate document
+    await gerarAvaliacaoPDF();
+  }
+}
+
+async function gerarAvaliacaoPDF(){
+  addMsg('agent','Que reflexão poderosa. 🌿\n\nVou agora montar a sua **Autorreflexão de Desempenho** — um documento completo para você usar nessa conversa.\n\nPrepare-se: o que você acabou de compartilhar tem muito mais valor do que você imagina.','Avaliação de Desempenho');
+  await delay(1800);
+  showTyping(); await delay(1200); removeTyping();
+
+  const av = state.avaliacao;
+  const nm = state.name || 'você';
+
+  // Generate PDF
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=16,CW=W-M*2;let y=0;
+  const LH=5.4;
+  const BROWN=[139,94,60],GOLD=[170,130,80],GREEN=[78,120,92],
+        BLUE=[66,100,130],TEXT=[44,36,22],MUTED=[120,104,86],
+        BG=[250,248,244],BORDER=[228,220,206];
+
+  function tb(txt,maxW,fs,font,style,color){
+    doc.setFont(font||'helvetica',style||'normal');
+    doc.setFontSize(fs||9);doc.setTextColor(...(color||TEXT));
+    return doc.splitTextToSize(String(txt||'—'),maxW);
+  }
+  function chk(h){if(y+h>278){doc.addPage();y=18;}}
+  function section(title){
+    chk(12);
+    doc.setFillColor(...BROWN);doc.roundedRect(M,y,CW,9,2,2,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255,255,255);
+    doc.text(title,M+5,y+6.3);y+=13;
+  }
+  function block(label, value, accent){
+    const lines=tb(value,CW-10,8.8,'helvetica','normal',TEXT);
+    const h=lines.length*LH+16;chk(h+4);
+    const ac=accent||GOLD;
+    doc.setFillColor(254,251,245);doc.setDrawColor(...ac);doc.setLineWidth(0.35);
+    doc.roundedRect(M,y,CW,h,2,2,'FD');
+    doc.setFillColor(...ac);doc.roundedRect(M,y,3,h,1.5,1.5,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...ac);
+    doc.text(label.toUpperCase(),M+7,y+6);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.8);doc.setTextColor(...TEXT);
+    doc.text(lines,M+7,y+12);
+    y+=h+5;
+  }
+
+  // Header
+  doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');
+  doc.setFillColor(...BROWN);doc.rect(0,0,W,54,'F');
+  doc.setFont('times','bold');doc.setFontSize(28);doc.setTextColor(255,255,255);doc.text('Impulsa',M,26);
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(220,198,172);doc.text('a sua agente de carreira',M,35);
+  doc.setDrawColor(200,175,145);doc.setLineWidth(0.25);doc.line(M,39,W-M,39);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(255,238,215);doc.text('MINHA AUTORREFLEXÃO SOBRE DESEMPENHO',M,47);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(195,172,148);
+  doc.text(new Date().toLocaleDateString('pt-BR',{dateStyle:'long'}),W-M,47,{align:'right'});
+  y=62;
+
+  if(state.name){doc.setFont('times','italic');doc.setFontSize(12);doc.setTextColor(...MUTED);doc.text(state.name,M,y);y+=7;}
+  doc.setFont('times','bold');doc.setFontSize(18);doc.setTextColor(...BROWN);doc.text('Minha Autorreflexão sobre Desempenho',M,y);y+=7;
+  doc.setFont('times','italic');doc.setFontSize(10);doc.setTextColor(...GOLD);doc.text('Período: '+(av.periodo||'—'),M,y);y+=5;
+  doc.setDrawColor(...GOLD);doc.setLineWidth(0.35);doc.line(M,y,M+80,y);y+=12;
+
+  // Sections
+  section('01  METAS E RESULTADOS');
+  block('Metas do período', av.metas, GOLD);
+
+  section('02  ENTREGAS E PROJETOS');
+  block('Projetos entregues', av.projetos, BLUE);
+  block('Além do esperado', av.alem, GREEN);
+
+  section('03  DESAFIOS E APRENDIZADOS');
+  block('Dificuldades e como enfrentei', av.dificuldades, BROWN);
+
+  section('04  O QUE QUERO PEDIR');
+  block('Minha solicitação nessa avaliação', av.pedido, GOLD);
+
+  section('05  COMO ESTOU E O QUE SUGIRO');
+  block('Como me sinto agora', av.sentimento, GREEN);
+  block('Sugestões para mim e para minha liderança', av.sugestoes, BLUE);
+
+  section('06  PRÓXIMO CICLO');
+  block('3 ações de melhoria que me comprometo', av.melhorias, BROWN);
+  block('Em que quero ser reconhecida', av.reconhecimento, GOLD);
+
+  // Footer
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setFillColor(...BROWN);doc.rect(0,285,W,12,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(210,185,158);
+    doc.text('Impulsa — a sua agente de carreira',M,292);
+    doc.text(`${p} / ${pages}`,W-M,292,{align:'right'});
+  }
+
+  doc.save(`impulsa-autorreflexao-desempenho-${(av.periodo||'').replace(/\s/g,'-').toLowerCase()||'ciclo'}.pdf`);
+
+  addMsg('agent','Seu documento está pronto para baixar! 🌿\n\nUse-o para se preparar antes da conversa, enviar para sua liderança com antecedência, ou ter como referência durante a reunião.\n\nVocê se dedicou a essa reflexão — isso já é um diferencial. 💛\n\nQuer agora montar o seu **Mapa de Carreira completo** com linha do tempo, SWOT e narrativa profissional?','Concluído');
+  setQR(['Sim, quero montar meu Mapa de Carreira','Não por agora, obrigada']);
+  state.phase = 'avaliacao_done';
 }
 
 // ============================================================
@@ -1911,6 +2067,11 @@ function submitSurvey(){
     const objLabel=OBJECTIVES[state.objective]?.label.toLowerCase()||'carreira';
     const msg='Obrigada'+nm+'! 💛\n\nAgora sim — seu **Mapa de Narrativas** está pronto! Ele reúne sua trajetória, SWOT, narrativa profissional, posicionamento e plano de ação para **'+objLabel+'**.\n\nGuarde, revise quando quiser e use como base nas suas próximas conversas de carreira. Você merece esse próximo passo. 🌿';
     addMsg('agent',msg,'Seu Mapa de Narrativas');
+    setTimeout(()=>{
+      addMsg('agent','Uma última coisa — você tem uma **avaliação de desempenho** chegando? Posso te ajudar a montar a sua autorreflexão com base em tudo que você compartilhou aqui. 🌿','');
+      setQR(['Sim, quero me preparar para a avaliação','Não por agora, obrigada']);
+      state.phase='pos_mapa';
+    },2000);
   }, 600);
 }
 
@@ -2265,7 +2426,7 @@ function resetApp(){
   localStorage.removeItem('impulsa_state');
   // Reset state to initial
   Object.assign(state, {
-    phase:'cadastro_nome', name:'', fullName:'', birthday:'', email:'',
+    phase:'cadastro_nome', mode:'mapa', name:'', fullName:'', birthday:'', email:'',
     objective:null, contexto:{experiencia:'',area:'',situacao:''},
     contextoStep:0, contextoAwaitingOther:false, timelineItems:[], tlStep:0, tlOpeningDone:false,
     tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false,
@@ -2346,8 +2507,34 @@ async function send(text){
     return;
   }
 
-  if(['cadastro_nome','cadastro_aniversario','cadastro_email'].includes(state.phase)) await handleCadastro(text);
+  if(state.phase==='mode_select') await handleModeSelect(text);
+  else if(['cadastro_nome','cadastro_aniversario','cadastro_email'].includes(state.phase)) await handleCadastro(text);
   else if(state.phase==='objetivo') await handleObjetivo(text);
+  else if(state.phase==='avaliacao') await handleAvaliacao(text);
+  else if(state.phase==='pos_mapa'){
+    if(/sim|avalia|desempenho/i.test(text)){
+      state.phase='avaliacao';
+      state.avaliacaoStep=0;
+      state.avaliacao={};
+      showTyping(); await delay(800); removeTyping();
+      addMsg('agent','Ótimo! Vamos montar sua autorreflexão. 🌿\n\nPrimeiro: **qual foi o período avaliado?**','Avaliação de Desempenho');
+      clearQR();
+    } else {
+      showTyping(); await delay(700); removeTyping();
+      addMsg('agent','Tudo bem! Quando precisar, é só voltar. 🌿','');
+    }
+  }
+  else if(state.phase==='avaliacao_done'){
+    if(/sim|mapa|carreira/i.test(text)){
+      state.phase='objetivo';
+      showTyping(); await delay(800); removeTyping();
+      addMsg('agent','Ótimo! Vamos montar o seu Mapa de Carreira. 🌿\n\nQual é o seu **objetivo de carreira** nesse momento?','Seu Objetivo');
+      setQR(['🔍 Recolocação profissional','📈 Promoção ou crescimento','💰 Aumento de salário','🧭 Mudança de empresa ou área','🌱 Retorno da licença maternidade','🔄 Pivotar a carreira','🤍 Não sei ainda — preciso de ajuda']);
+    } else {
+      showTyping(); await delay(700); removeTyping();
+      addMsg('agent','Tudo bem! Quando quiser voltar, a Impulsa está aqui. 🌿','');
+    }
+  }
   else if(state.phase==='descoberta') await handleDescoberta(text);
   else if(state.phase==='contexto') await handleContexto(text);
   else if(state.phase==='tl_years') await handleTLYears(text);
