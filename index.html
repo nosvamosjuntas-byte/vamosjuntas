@@ -500,7 +500,7 @@ const state = {
   // cadastro_nome | cadastro_aniversario | cadastro_email | mode_select | objetivo | avaliacao | timeline | swot | done
   name:'', birthday:'', email:'',
   objective:null,
-  tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, tlLastWasQR:false, swotStep:0, swotSubStep:0,
+  tlStep:0, tlOpeningDone:false, tlAwaitingContinue:false, tlAwaitingFreeText:false, tlJustFollowedUp:false, tlFinalCheck:false, tlYearIdx:0, tlLastWasQR:false, avaliacaoAwaitingComplement:false, swotStep:0, swotSubStep:0,
   timelineItems:[],
   swot:{forcas:[],fraquezas:[],oportunidades:[],ameacas:[]},
   summaryText:'',
@@ -696,14 +696,39 @@ function renderAvaliacaoCards(){
   }).join('');
 }
 
+// Keys where we should invite free-text complement after a QR pick
+const AVALIACAO_QR_KEYS = new Set(['metas_alcance','alem','pedido','sentimento']);
+
 async function handleAvaliacao(text){
   const q = AVALIACAO_QS[state.avaliacaoStep];
   if(!q){ console.error('handleAvaliacao: no question at step', state.avaliacaoStep); return; }
-  state.avaliacao[q.key] = text;
-  state.avaliacaoStep++;
+
+  // If awaiting complement, append to existing value then proceed
+  if(state.avaliacaoAwaitingComplement){
+    state.avaliacaoAwaitingComplement = false;
+    if(!/^(não|nao|pode|seguir|próxima|proxima)/i.test(text.trim())){
+      state.avaliacao[q.key] = state.avaliacao[q.key] + ' — ' + text.trim();
+      renderAvaliacaoCards();
+    }
+    state.avaliacaoStep++;
+    showTyping(); await delay(1000); removeTyping();
+  } else {
+    state.avaliacao[q.key] = text;
+    renderAvaliacaoCards();
+    showTyping(); await delay(1000); removeTyping();
+
+    // If this was a QR pick on a key that benefits from detail, ask for complement
+    const wasQRPick = q.qr.length > 0 && q.qr.some(opt => opt === text.trim());
+    if(wasQRPick && AVALIACAO_QR_KEYS.has(q.key)){
+      state.avaliacaoAwaitingComplement = true;
+      addMsg('agent', 'Anotado. ✦\n\nQuer complementar com mais detalhes? Pode escrever à vontade — ou clique em continuar.', 'Avaliação de Desempenho');
+      setQR(['Pode continuar']);
+      return;
+    }
+    state.avaliacaoStep++;
+  }
+
   console.log('Avaliacao step', state.avaliacaoStep, '/', AVALIACAO_QS.length, '— key:', q.key);
-  renderAvaliacaoCards();
-  showTyping(); await delay(1000); removeTyping();
 
   if(state.avaliacaoStep < AVALIACAO_QS.length){
     const next = AVALIACAO_QS[state.avaliacaoStep];
@@ -2193,7 +2218,9 @@ function submitSurvey(){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify(payload),
-  }).catch(()=>{}); // silent fail — user experience not affected
+  }).then(r=>{ console.log('Mapa webhook status:', r.status); return r.text(); })
+    .then(t=>console.log('Mapa webhook response:', t))
+    .catch(e=>console.error('Mapa webhook error:', e));
 
   setTimeout(()=>{
     const nm=state.name?', '+state.name:'';
@@ -2582,6 +2609,23 @@ async function send(text){
   if(text.trim().length <= 2 || /^[?!.]+$/.test(text.trim())){
     showTyping(); await delay(700); removeTyping();
     addMsg('agent','Pode escrever com suas palavras — estou ouvindo. 🌿','');
+    return;
+  }
+
+  // Gibberish detection — random letter sequences with no real words
+  function looksGibberish(t){
+    const words = t.trim().split(/\s+/);
+    const gibberishWords = words.filter(w=>{
+      if(w.length < 4) return false;
+      const vowels = (w.match(/[aeiouáéíóúãõâêîôûàü]/gi)||[]).length;
+      const ratio = vowels / w.length;
+      return ratio < 0.15; // very few vowels = likely gibberish
+    });
+    return gibberishWords.length >= 2 || (words.length === 1 && gibberishWords.length === 1 && words[0].length > 6);
+  }
+  if(looksGibberish(text)){
+    showTyping(); await delay(800); removeTyping();
+    addMsg('agent','Hmm, não consegui entender bem. Pode tentar escrever de outro jeito? 🌿','');
     return;
   }
 
