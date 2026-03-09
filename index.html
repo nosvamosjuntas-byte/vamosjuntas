@@ -1464,9 +1464,10 @@ function gerarNarrativa(){
   const objKey = state.objective || 'recolocacao';
   const area = state.contexto?.area || 'sua área';
   const exp = state.contexto?.experiencia || 'anos de mercado';
-  const tl0 = state.timelineItems[0]?.text || null;
-  const tl1 = state.timelineItems[1]?.text || null;
-  const tlFrase = tl0 ? `A sua trajetória — que inclui ${tl0}${tl1 ? ' e '+tl1 : ''} — mostra` : 'Sua trajetória mostra';
+  const cleanTL = (t) => t ? t.replace(/\b(19|20)\d{2}\b/g,'').replace(/\s{2,}/g,' ').trim().slice(0,60) : null;
+  const tl0 = cleanTL(state.timelineItems[0]?.text) || null;
+  const tl1 = cleanTL(state.timelineItems[1]?.text) || null;
+  const tlFrase = tl0 ? `A sua trajetória mostra` : 'Sua trajetória mostra';
 
   // ── Resumo profissional (3ª pessoa, denso em dados SWOT) ─────
   const forcasResumo = f2 ? `${f0}, ${f1} e ${f2}` : `${f0} e ${f1}`;
@@ -1484,10 +1485,10 @@ function gerarNarrativa(){
     pivotar:     'Estou em pivô de carreira — com consciência e propósito',
   }[objKey] || 'Estou num momento importante de carreira';
   const frFrase = fr0 ? ` Sei que ${fr0} é um ponto de atenção para mim — e trabalho ativamente nisso.` : '';
-  const elevator = `"${gancho}. Tenho ${exp} em ${area} e o que me diferencia é ${f0} — especialmente combinado com ${f1}.${frFrase} Vejo que ${o0}, e é exatamente aí que consigo contribuir de verdade. ${tlFrase.replace('mostra','mostrou')} que sei me adaptar e entregar mesmo quando o caminho é difícil."`;
+  const elevator = `"${gancho}. Tenho ${exp} em ${area} e o que me diferencia é ${f0} — especialmente combinado com ${f1}.${frFrase} Vejo que ${o0}, e é exatamente aí que consigo contribuir de verdade. Sei me adaptar e entregar mesmo quando o caminho é difícil."`;
 
   // ── Como responder "me fala sobre você" (conversa real, flui) ──
-  const viradaFrase = tl0 ? `Um momento que me marcou muito foi ${tl0} — aprendi ali que ${f1} é algo que carrego de forma muito natural.` : `Fui construindo, ao longo do caminho, uma capacidade real de ${f1}.`;
+  const viradaFrase = tl0 ? `Fui construindo uma capacidade real de ${f1} — ao longo de cada fase da minha carreira.` : `Fui construindo, ao longo do caminho, uma capacidade real de ${f1}.`;
   const ameacaFrase = a0 ? ` Sei que ${a0} é um desafio real no meu contexto — mas isso também me fez aprender a ${f0}.` : '';
   const meConteSobre = `"Minha trajetória em ${area} começou com ${exp} de muito aprendizado prático. ${viradaFrase}${ameacaFrase} Hoje o que mais me motiva é ${o0} — e é por isso que estou buscando ${obj}. Acho que o que eu trago de mais valioso é essa combinação de ${f0} com ${f1} — e a consciência de para onde quero ir."`;
 
@@ -2006,20 +2007,29 @@ function generatePDF(){
   sectionHeader('01','LINHA DO TEMPO DE VIDA');
   const tc={profissional:BLUE,pessoal:GREEN,desafio:RED,conquista:GOLD};
   state.timelineItems.forEach((item,i)=>{
-    const lines=textBlock(item.text,CW-26,8.5);
-    const cH=lines.length*LH+11;chk(cH+8);
+    // Strip year numbers from display text (they're shown in the year label already)
+    const cleanText = item.text.replace(/\b(19|20)\d{2}\b/g,'').replace(/\s{2,}/g,' ').trim();
+    const lines=textBlock(cleanText,CW-26,8.5,'helvetica','normal',TEXT);
+    const cH=Math.max(lines.length*LH+14,16);chk(cH+8);
     const c=tc[item.type]||GOLD;
-    doc.setFillColor(...c);doc.circle(M+3,y+4,2,'F');
+    // Connector line
     if(i<state.timelineItems.length-1){
-      doc.setDrawColor(...BORDER);doc.setLineWidth(0.25);doc.line(M+3,y+6,M+3,y+cH+8);
+      doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.line(M+3,y+6,M+3,y+cH+8);
     }
+    // Dot
+    doc.setFillColor(...c);doc.circle(M+3,y+4,2.2,'F');
+    // Year label
     const yrLabel=item.yearDisplay||(item.year?String(item.year):'—');
-    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...c);doc.text(yrLabel,M+7,y+4.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...c);
+    doc.text(yrLabel,M+8,y+5);
+    // Card
     doc.setFillColor(255,255,255);doc.setDrawColor(...BORDER);doc.setLineWidth(0.25);
-    doc.roundedRect(M+19,y-1,CW-20,cH,2,2,'FD');
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);doc.text(lines,M+23,y+5);
+    doc.roundedRect(M+22,y-1,CW-23,cH,2,2,'FD');
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+    doc.text(lines,M+26,y+6);
+    // Type badge
     doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(...c);
-    doc.text(typeLabel(item.type).toUpperCase(),M+23,y+cH+0.5);
+    doc.text(typeLabel(item.type).toUpperCase(),M+26,y+cH+0.5);
     y+=cH+8;
   });
 
@@ -2028,7 +2038,7 @@ function generatePDF(){
   const insightTexts=insightEls.length>0
     ? Array.from(insightEls).map(el=>el.textContent.replace(/^[→✦\s]+/,'').trim())
     : ['Você tem histórico real de superar adversidades.','Suas conquistas mostram iniciativa e resultados concretos.','Cada fase te preparou para o próximo passo.'];
-  const insLinesAll=insightTexts.map(t=>textBlock('→ '+t,CW-12,8));
+  const insLinesAll=insightTexts.map(t=>textBlock('- '+t,CW-12,8));
   const insH=insLinesAll.reduce((a,l)=>a+l.length*LH,0)+14;
   chk(insH+4);
   doc.setFillColor(254,251,245);doc.setDrawColor(...GOLD);doc.setLineWidth(0.35);
@@ -2067,7 +2077,7 @@ function generatePDF(){
       });
     });
     const mI=Math.max(state.swot[pair[0].key].length,state.swot[pair[1].key].length);
-    const qH=Math.max(mI*8.2+18,28);
+    const qH=Math.max(mI*8.5+20,32); // consistent height both cards in row
     chk(qH+8);
     pair.forEach((q,col)=>{
       const x=M+col*(hw+6);
