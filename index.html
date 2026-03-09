@@ -2321,7 +2321,7 @@ async function send(text){
   }
 
   // Global reset detection
-  if(/reset|reinici|recome[cç]|apagar|apague|zerar|zere|deletar|limpar|come[cç]ar do zero|do zero|tudo de novo|tudo por favor/i.test(text.trim())){
+  if(/^(reset|reinici|recome[cç]|apagar tudo|apague tudo|zerar tudo|zere tudo|deletar tudo|limpar tudo|come[cç]ar do zero|tudo de novo|tudo por favor)/i.test(text.trim())){
     showTyping(); await delay(900); removeTyping();
     addMsg('agent','Claro! Posso apagar tudo e recomeçar do zero. Tem certeza?','');
     setQR(['Sim, apagar tudo e recomeçar','Não, pode continuar']);
