@@ -2258,8 +2258,9 @@ function generatePDF(){
     small:  (s)=>{ doc.setFont('helvetica','normal'); doc.setFontSize(s||7.5);},
   };
 
-  function wrap(txt, maxW, fs){ F.body(fs); return doc.splitTextToSize(String(txt||'—'), maxW); }
-  function wrapB(txt, maxW, fs){ F.title(fs); return doc.splitTextToSize(String(txt||'—'), maxW); }
+  function wrap(txt, maxW, fs){ F.body(fs); const r=doc.splitTextToSize(String(txt||'—'), maxW||CW); return r.length?r:['—']; }
+  function wrapB(txt, maxW, fs){ F.title(fs); const r=doc.splitTextToSize(String(txt||'—'), maxW||CW); return r.length?r:['—']; }
+  function safeText(lines, x, y, opts){ const arr=Array.isArray(lines)?lines.filter(Boolean):[String(lines||'—')]; if(arr.length) doc.text(arr.length===1?arr[0]:arr, x, y, opts||{}); }
 
   // ── PAGE CHECK ───────────────────────────────────────────────
   function chk(needed){
@@ -2371,7 +2372,7 @@ function generatePDF(){
   doc.roundedRect(M,y,CW,insH,2,2,'FD');
   F.title(8); doc.setTextColor(...BROWN); doc.text('Padroes que emergem da sua historia', M+5, y+8);
   let iy=y+14;
-  insLines.forEach(lines=>{ F.body(8); doc.setTextColor(...MUTED); doc.text(lines,M+5,iy); iy+=lines.length*LH+2; });
+  insLines.forEach(lines=>{ if(!lines||!lines.length)return; F.body(8); doc.setTextColor(...MUTED); doc.text(lines,M+5,iy); iy+=lines.length*LH+2; });
   y+=insH+8;
 
   // ── 02 SWOT ──────────────────────────────────────────────────
@@ -2395,8 +2396,8 @@ function generatePDF(){
       let sy=y+18;
       state.swot[p.key].forEach(item=>{
         F.small(7.5); doc.setTextColor(...TEXT);
-        const ls=doc.splitTextToSize('· '+item, cw-10);
-        doc.text(ls, cx+7, sy); sy+=ls.length*4.8+1.5;
+        const ls=doc.splitTextToSize('· '+(item||''), cw-10);
+        if(ls&&ls.length){ doc.text(ls, cx+7, sy); sy+=ls.length*4.8+1.5; }
       });
     });
     y+=qH+6;
@@ -2489,8 +2490,8 @@ function generatePDF(){
       doc.setDrawColor(...BORDER); doc.setLineWidth(0.2); doc.rect(M,y,CW,rowH,'S');
       F.label(7); doc.setTextColor(...MUTED); doc.text(row, M+3, y+5);
       vals.forEach((v,vi)=>{
-        const ls=doc.splitTextToSize(v[ri]||'—', colWt-8);
-        F.body(7.5); doc.setTextColor(...TEXT); doc.text(ls, M+(vi+1)*colWt+3, y+5);
+        const ls=doc.splitTextToSize(String(v[ri]||'—'), colWt-8);
+        if(ls&&ls.length){ F.body(7.5); doc.setTextColor(...TEXT); doc.text(ls, M+(vi+1)*colWt+3, y+5); }
       });
       y+=rowH;
     });
