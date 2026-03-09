@@ -1836,7 +1836,7 @@ function checkSurveyReady(){
   const ready=state.survey.q1&&state.survey.q2&&state.survey.q3&&state.survey.q4&&state.survey.q5;
   document.getElementById('surveySubmit').disabled=!ready;
 }
-const MAKE_WEBHOOK = 'https://hook.us2.make.com/57uxwblwv1iut5p6ql4tsbornx23ufvv';
+const MAKE_WEBHOOK = 'https://hook.us2.make.com/edrsj4gdoiqmh83mjyis649m0sgtxrvn';
 
 function submitSurvey(){
   document.getElementById('surveySubmit').style.display='none';
@@ -1856,6 +1856,17 @@ function submitSurvey(){
     timeline: state.timelineItems.map(i=>i.text),
     swot: state.swot,
     sintese: state.summaryText,
+    narrativa: {
+      resumo: state.narrativa?.resumo || '—',
+      elevator: state.narrativa?.elevator || '—',
+      me_conta_sobre: state.narrativa?.meConteSobre || '—',
+      frase_posicionamento: state.narrativa?.frasePosicionamento || '—',
+    },
+    posicionamento: {
+      diferencial: state.posicionamento?.diferencial || '—',
+      headline_linkedin: state.posicionamento?.headline || '—',
+      como_se_posicionar: state.posicionamento?.como || '—',
+    },
     plano: {
       acoes: state.acoes.map(a=>({acao:a.text, prazo:a.prazo||'sem prazo'})),
       priorizadas: state.acoesPriorizadas.map(a=>({acao:a.text, prazo:a.prazo})),
