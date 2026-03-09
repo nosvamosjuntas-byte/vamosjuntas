@@ -2570,6 +2570,11 @@ async function send(text){
       showTyping(); await delay(800); removeTyping();
       addMsg('agent','Ótimo! Vamos montar sua autorreflexão. 🌿\n\nPrimeiro: **qual foi o período avaliado?**','Avaliação de Desempenho');
       clearQR();
+    } else if(/reinici|recomeç|do zero|apagar|zerar|limpar|começar de novo/i.test(text)){
+      state.phase='confirm_reset';
+      showTyping(); await delay(700); removeTyping();
+      addMsg('agent','Tem certeza que quer apagar tudo e começar do zero? 🌿','');
+      setQR(['Sim, apagar tudo','Não, cancelar']);
     } else {
       showTyping(); await delay(700); removeTyping();
       addMsg('agent','Tudo bem! Quando precisar, é só voltar. 🌿','');
