@@ -2813,6 +2813,11 @@ window.addEventListener('load', function(){
           setQR(['Sim, quero montar agora','Agora não, obrigada']);
           state.phase='pos_mapa';
         },1200);
+      } else {
+        // Fallback: fase não mapeada — oferece escolha
+        addMsg('agent','O que você quer fazer hoje' + (nm ? ', '+nm : '') + '? 🌿','');
+        setQR(['🗺️ Montar meu Mapa de Carreira completo','📋 Me preparar para minha avaliação de desempenho']);
+        state.phase='mode_select';
       }
     }, 400);
   } else {
