@@ -2791,7 +2791,7 @@ window.addEventListener('load', function(){
         const q=getSwotQs()[state.swotStep]||getSwotQs()[0];
         addMsg('agent','Continuando sua SWOT. '+q.intro, q.phase);
         askSwotQuadrant(q);
-      } else if(state.phase==='done'){
+      } else if(state.phase==='done'||state.phase==='pos_mapa'||state.phase==='avaliacao_done'){
         addMsg('agent','Seu mapa já está completo! Seu Mapa de Narrativas está disponível abaixo. 🌿','Concluído');
         setTimeout(()=>{
           addMsg('agent','Você tem uma **avaliação de desempenho** chegando? Posso te ajudar a montar a sua autorreflexão. 🌿','');
