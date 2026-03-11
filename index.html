@@ -2239,6 +2239,7 @@ function submitSurvey(){
 // PDF
 // ============================================================
 function generatePDF(){
+  try {
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const W=210,M=16,CW=W-M*2;
@@ -2509,6 +2510,10 @@ function generatePDF(){
   }
 
   doc.save('impulsa-mapa-de-narrativas-'+(state.objective||'carreira')+'.pdf');
+  } catch(err){
+    console.error('Erro ao gerar PDF:', err);
+    alert('Erro ao gerar o PDF: ' + err.message + '\n\nVerifique o console (F12) para mais detalhes.');
+  }
 }
 
 
