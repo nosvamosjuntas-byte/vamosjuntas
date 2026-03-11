@@ -2615,14 +2615,19 @@ async function send(text){
 
   // Gibberish detection — random letter sequences with no real words
   function looksGibberish(t){
-    const words = t.trim().split(/\s+/);
+    const clean = t.trim();
+    // Never flag: dates, numbers, years, emails, short inputs
+    if(/^\d/.test(clean)) return false; // starts with digit (date, year, number)
+    if(/\d{4}/.test(clean)) return false; // contains a year
+    if(/[\/\-\.]/.test(clean)) return false; // contains separators (dates)
+    if(/@/.test(clean)) return false; // email
+    const words = clean.split(/\s+/);
     const gibberishWords = words.filter(w=>{
-      if(w.length < 4) return false;
+      if(w.length < 6) return false;
       const vowels = (w.match(/[aeiouáéíóúãõâêîôûàü]/gi)||[]).length;
-      const ratio = vowels / w.length;
-      return ratio < 0.15; // very few vowels = likely gibberish
+      return vowels / w.length < 0.12;
     });
-    return gibberishWords.length >= 2 || (words.length === 1 && gibberishWords.length === 1 && words[0].length > 6);
+    return gibberishWords.length >= 2 || (words.length === 1 && gibberishWords.length === 1 && words[0].length > 8);
   }
   if(looksGibberish(text)){
     showTyping(); await delay(800); removeTyping();
